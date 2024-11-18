@@ -7,9 +7,9 @@
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	quad = Mesh::GenerateQuad();
 
-	heightMap = new HeightMap(TEXTUREDIR "noise.png");
+	heightMap = new HeightMap(TEXTUREDIR "volcano_heightmap.png");
 
-	waterTex = SOIL_load_OGL_texture(TEXTUREDIR "lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	lavaTex = SOIL_load_OGL_texture(TEXTUREDIR "lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
 	earthTex = SOIL_load_OGL_texture(TEXTUREDIR "Barren Reds.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
@@ -22,13 +22,13 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0
 	);
 
-	if (!earthTex || !earthBump || !waterTex || !cubeMap) {
+	if (!earthTex || !earthBump || !lavaTex || !cubeMap) {
 		return;
 	}
 
 	SetTextureRepeating(earthTex, true);
 	SetTextureRepeating(earthBump, true);
-	SetTextureRepeating(waterTex, true);
+	SetTextureRepeating(lavaTex, true);
 
 	reflectShader = new Shader("reflectVertex.glsl", "reflectFragment.glsl");
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
@@ -76,7 +76,7 @@ void Renderer::RenderScene() {
 
 	DrawSkybox();
 	DrawHeightmap();
-	DrawWater();
+	DrawLava();
 }
 
 void Renderer::DrawSkybox() {
@@ -111,7 +111,7 @@ void Renderer::DrawHeightmap() {
 	heightMap->Draw();
 }
 
-void Renderer::DrawWater() {
+void Renderer::DrawLava() {
 	BindShader(reflectShader);
 
 	glUniform3fv(glGetUniformLocation(reflectShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
@@ -120,14 +120,16 @@ void Renderer::DrawWater() {
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "cubeTex"), 2);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, waterTex);
+	glBindTexture(GL_TEXTURE_2D, lavaTex);
 
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
 
 	Vector3 hSize = heightMap->GetHeightmapSize();
 
-	modelMatrix = Matrix4::Translation(hSize * 0.5f) *
+	float waterOffset = -20.0f; // Adjust this value to move the water up or down
+	modelMatrix = Matrix4::Translation(hSize * Vector3(0.5f, 0.5f, 0.5f)) *
+		Matrix4::Translation(Vector3(0.0f, waterOffset, 0.0f)) * // Move water down
 		Matrix4::Scale(hSize * 0.5f) *
 		Matrix4::Rotation(90, Vector3(1, 0, 0));
 

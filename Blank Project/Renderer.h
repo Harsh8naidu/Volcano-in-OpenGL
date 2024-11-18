@@ -13,7 +13,7 @@ public:
 
 protected:
 	void DrawHeightmap();
-	void DrawWater();
+	void DrawLava();
 	void DrawSkybox();
 
 	Shader* lightShader;
@@ -27,7 +27,7 @@ protected:
 	Camera* camera;
 
 	GLuint cubeMap;
-	GLuint waterTex;
+	GLuint lavaTex;
 	GLuint earthTex;
 	GLuint earthBump;
 

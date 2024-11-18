@@ -21,6 +21,8 @@ protected:
 	Shader* skyboxShader;
 
 	HeightMap* heightMap;
+	HeightMap* noiseHeightMap;
+
 	Mesh* quad;
 
 	Light* light;

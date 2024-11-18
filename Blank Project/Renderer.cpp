@@ -8,6 +8,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	quad = Mesh::GenerateQuad();
 
 	heightMap = new HeightMap(TEXTUREDIR "volcano_heightmap.png");
+	noiseHeightMap = new HeightMap(TEXTUREDIR "noise.png");
 
 	lavaTex = SOIL_load_OGL_texture(TEXTUREDIR "lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
@@ -57,6 +58,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 Renderer::~Renderer(void) {
 	delete camera;
 	delete heightMap;
+	delete noiseHeightMap;
 	delete quad;
 	delete reflectShader;
 	delete skyboxShader;
@@ -103,12 +105,24 @@ void Renderer::DrawHeightmap() {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, earthBump);
 
-	modelMatrix.ToIdentity(); //New!
-	textureMatrix.ToIdentity(); //New!
+	modelMatrix.ToIdentity();
+	textureMatrix.ToIdentity();
 
 	UpdateShaderMatrices();
-
 	heightMap->Draw();
+
+	modelMatrix.ToIdentity();
+
+	// Scaling for the noiseHeightMap only(no scaling for default heightmap)
+	float noiseScaleX = 2.0f;  // Example scale factor for X axis
+	float noiseScaleY = 1.0f;  // Example scale factor for Y axis (adjust as needed)
+	float noiseScaleZ = 2.0f;
+
+	modelMatrix = Matrix4::Scale(Vector3(noiseScaleX, noiseScaleY, noiseScaleZ)) * modelMatrix;
+
+	UpdateShaderMatrices();
+	noiseHeightMap->Draw();
+	
 }
 
 void Renderer::DrawLava() {

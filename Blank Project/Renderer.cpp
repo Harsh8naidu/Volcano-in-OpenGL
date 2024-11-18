@@ -9,7 +9,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	heightMap = new HeightMap(TEXTUREDIR "noise.png");
 
-	waterTex = SOIL_load_OGL_texture(TEXTUREDIR "water.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	waterTex = SOIL_load_OGL_texture(TEXTUREDIR "lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
 	earthTex = SOIL_load_OGL_texture(TEXTUREDIR "Barren Reds.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 

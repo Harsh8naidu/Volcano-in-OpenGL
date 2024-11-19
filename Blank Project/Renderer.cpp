@@ -2,7 +2,8 @@
 #include "../nclgl/Camera.h"
 #include "../nclgl/Light.h"
 #include "../nclgl/HeightMap.h"
-#include "../nclgl/Shader.h"
+#include "../nclgl/MeshAnimation.h"
+#include "../nclgl/MeshMaterial.h"
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	quad = Mesh::GenerateQuad();
@@ -46,12 +47,35 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
+	// Skeletal Mesh Initialization
+	skinningShader = new Shader("SkinningVertex.glsl", "TexturedFragment.glsl");
+	if (!skinningShader->LoadSuccess()) {
+		return;
+	}
+
+	mesh = Mesh::LoadFromMeshFile("Role_T.msh");
+	anim = new MeshAnimation("Role_T.anm");
+	material = new MeshMaterial("Role_T.mat");
+
+	for (int i = 0; i < mesh->GetSubMeshCount(); ++i) {
+		const MeshMaterialEntry* matEntry = material->GetMaterialForLayer(i);
+
+		const string* filename = nullptr;
+		matEntry->GetEntry("Diffuse", &filename);
+		string path = TEXTUREDIR + *filename;
+		GLuint texID = SOIL_load_OGL_texture(path.c_str(), SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
+		matTextures.emplace_back(texID);
+	}
+
+	currentFrame = 0;
+	frameTime = 0.0f;
+
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-	waterRotate = 0.0f;
-	waterCycle = 0.0f;
+	lavaRotate = 0.0f;
+	lavaCycle = 0.0f;
 	init = true;
 }
 
@@ -64,13 +88,26 @@ Renderer::~Renderer(void) {
 	delete skyboxShader;
 	delete lightShader;
 	delete light;
+
+	// Skeletal Mesh Cleanup
+	delete mesh;
+	delete anim;
+	delete material;
+	delete skinningShader;
 }
 
 void Renderer::UpdateScene(float dt) {
 	camera->UpdateCamera(dt);
 	viewMatrix = camera->BuildViewMatrix();
-	waterRotate += dt * 2.0f; // Rotate the water texture
-	waterCycle += dt * 0.25f; // Cycle the water texture
+	lavaRotate += dt * 2.0f; // Rotate the water texture
+	lavaCycle += dt * 0.25f; // Cycle the water texture
+
+	// Skeletal Mesh Update
+	frameTime -= dt;
+	while (frameTime < 0.0f) {
+		currentFrame = (currentFrame + 1) % anim->GetFrameCount();
+		frameTime += 1.0f / anim->GetFrameRate();
+	}
 }
 
 void Renderer::RenderScene() {
@@ -79,6 +116,7 @@ void Renderer::RenderScene() {
 	DrawSkybox();
 	DrawHeightmap();
 	DrawLava();
+	DrawSkeletalMesh();
 }
 
 void Renderer::DrawSkybox() {
@@ -147,12 +185,41 @@ void Renderer::DrawLava() {
 		Matrix4::Scale(hSize * 0.5f) *
 		Matrix4::Rotation(90, Vector3(1, 0, 0));
 
-	textureMatrix = Matrix4::Translation(Vector3(waterCycle, 0.0f, waterCycle)) *
+	textureMatrix = Matrix4::Translation(Vector3(lavaCycle, 0.0f, lavaCycle)) *
 		Matrix4::Scale(Vector3(10, 10, 10)) *
-		Matrix4::Rotation(waterRotate, Vector3(0, 0, 1));
+		Matrix4::Rotation(lavaRotate, Vector3(0, 0, 1));
 
 	UpdateShaderMatrices();
 
 	quad->Draw();
+}
+
+void Renderer::DrawSkeletalMesh() {
+	BindShader(skinningShader);
+
+	
+
+	glUniform1i(glGetUniformLocation(skinningShader->GetProgram(), "diffuseTex"), 0);
+
+	UpdateShaderMatrices();
+
+	vector<Matrix4> frameMatrices;
+	const Matrix4* invBindPose = mesh->GetInverseBindPose();
+	const Matrix4* frameData = anim->GetJointData(currentFrame);
+
+	for (unsigned int i = 0; i < mesh->GetJointCount(); ++i) {
+		frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
+	}
+
+	int j = glGetUniformLocation(skinningShader->GetProgram(), "joints");
+	glUniformMatrix4fv(j, frameMatrices.size(), false, (float*)frameMatrices.data());
+
+	
+
+	for (int i = 0; i < mesh->GetSubMeshCount(); ++i) {
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, matTextures[i]);
+		mesh->DrawSubMesh(i);
+	}
 }
 

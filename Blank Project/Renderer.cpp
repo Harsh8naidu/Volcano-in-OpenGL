@@ -8,7 +8,8 @@
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	quad = Mesh::GenerateQuad();
-	volcanoMesh = Mesh::LoadFromMeshFile("OffsetCubeY.msh");
+	volcanoMesh = Mesh::LoadFromMeshFile("Volcano.msh");
+
 
 	heightMap = new HeightMap(TEXTUREDIR "volcano_heightmap.png");
 	noiseHeightMap = new HeightMap(TEXTUREDIR "noise.png");

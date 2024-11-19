@@ -1,0 +1,10 @@
+MeshMat
+1
+1
+1
+volcano_model_material
+3
+Diffuse:/models/volcanotex/1001_baseColor.jpeg
+Bump:/models/volcanotex/1001_normal.png
+Metallic:/models/volcanotex/1001_metallicRoughness.png
+0

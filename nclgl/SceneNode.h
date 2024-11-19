@@ -58,7 +58,8 @@ protected:
 	Vector3 modelScale;
 	Vector4 colour;
 	std::vector<SceneNode*> children;
-	
+	std::vector<GLuint> materialTextures;  // Store the material textures
+
 	float distanceFromCamera;
 	float boundingRadius;
 	GLuint texture;

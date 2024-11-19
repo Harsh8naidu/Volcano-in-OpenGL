@@ -138,9 +138,11 @@
   <ItemGroup>
     <ClCompile Include="BlankProject.cpp" />
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="Volcano.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Renderer.h" />
+    <ClInclude Include="Volcano.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

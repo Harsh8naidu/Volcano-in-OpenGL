@@ -7,6 +7,7 @@ class HeightMap;
 class Mesh;
 class MeshAnimation;
 class MeshMaterial;
+class SceneNode;
 
 class Renderer : public OGLRenderer {
 public:
@@ -19,13 +20,14 @@ public:
 protected:
 	void DrawHeightmap();
 	void DrawLava();
-	void DrawSkeletalMesh();
 	void DrawSkybox();
+	void DrawVolcano();
+	void DrawNode(SceneNode* n);
 
 	Shader* lightShader;
 	Shader* reflectShader;
 	Shader* skyboxShader;
-	Shader* skinningShader;
+	Shader* modelShader;
 
 	HeightMap* heightMap;
 	HeightMap* noiseHeightMap;
@@ -39,15 +41,12 @@ protected:
 	GLuint lavaTex;
 	GLuint earthTex;
 	GLuint earthBump;
+	GLuint modelTexture;
 
 	float lavaRotate;
 	float lavaCycle;
 
-	Mesh* mesh;
-	MeshAnimation* anim;
-	MeshMaterial* material;
-	vector<GLuint> matTextures;
+	SceneNode* rootNode;
 
-	int currentFrame;
-	float frameTime;
+	Mesh* volcanoMesh;
 };

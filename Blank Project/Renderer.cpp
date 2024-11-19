@@ -4,9 +4,11 @@
 #include "../nclgl/HeightMap.h"
 #include "../nclgl/MeshAnimation.h"
 #include "../nclgl/MeshMaterial.h"
+#include "Volcano.h"
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	quad = Mesh::GenerateQuad();
+	volcanoMesh = Mesh::LoadFromMeshFile("OffsetCubeY.msh");
 
 	heightMap = new HeightMap(TEXTUREDIR "volcano_heightmap.png");
 	noiseHeightMap = new HeightMap(TEXTUREDIR "noise.png");
@@ -32,6 +34,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	SetTextureRepeating(earthBump, true);
 	SetTextureRepeating(lavaTex, true);
 
+	modelShader = new Shader("SceneVertex.glsl", "SceneFragment.glsl");
 	reflectShader = new Shader("reflectVertex.glsl", "reflectFragment.glsl");
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
 	lightShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
@@ -47,28 +50,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
-	// Skeletal Mesh Initialization
-	skinningShader = new Shader("SkinningVertex.glsl", "TexturedFragment.glsl");
-	if (!skinningShader->LoadSuccess()) {
-		return;
-	}
-
-	mesh = Mesh::LoadFromMeshFile("Role_T.msh");
-	anim = new MeshAnimation("Role_T.anm");
-	material = new MeshMaterial("Role_T.mat");
-
-	for (int i = 0; i < mesh->GetSubMeshCount(); ++i) {
-		const MeshMaterialEntry* matEntry = material->GetMaterialForLayer(i);
-
-		const string* filename = nullptr;
-		matEntry->GetEntry("Diffuse", &filename);
-		string path = TEXTUREDIR + *filename;
-		GLuint texID = SOIL_load_OGL_texture(path.c_str(), SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
-		matTextures.emplace_back(texID);
-	}
-
-	currentFrame = 0;
-	frameTime = 0.0f;
+	rootNode = new SceneNode();
+	rootNode->AddChild(new Volcano(volcanoMesh));
+	
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -89,11 +73,9 @@ Renderer::~Renderer(void) {
 	delete lightShader;
 	delete light;
 
-	// Skeletal Mesh Cleanup
-	delete mesh;
-	delete anim;
-	delete material;
-	delete skinningShader;
+	// volcano model and shader cleanup
+	delete volcanoMesh;
+	delete modelShader;
 }
 
 void Renderer::UpdateScene(float dt) {
@@ -102,12 +84,8 @@ void Renderer::UpdateScene(float dt) {
 	lavaRotate += dt * 2.0f; // Rotate the water texture
 	lavaCycle += dt * 0.25f; // Cycle the water texture
 
-	// Skeletal Mesh Update
-	frameTime -= dt;
-	while (frameTime < 0.0f) {
-		currentFrame = (currentFrame + 1) % anim->GetFrameCount();
-		frameTime += 1.0f / anim->GetFrameRate();
-	}
+	rootNode->Update(dt);
+
 }
 
 void Renderer::RenderScene() {
@@ -116,7 +94,7 @@ void Renderer::RenderScene() {
 	DrawSkybox();
 	DrawHeightmap();
 	DrawLava();
-	DrawSkeletalMesh();
+	DrawNode(rootNode);
 }
 
 void Renderer::DrawSkybox() {
@@ -166,8 +144,6 @@ void Renderer::DrawHeightmap() {
 void Renderer::DrawLava() {
 	BindShader(reflectShader);
 
-	glUniform3fv(glGetUniformLocation(reflectShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
-
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "diffuseTex"), 0);
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "cubeTex"), 2);
 
@@ -194,32 +170,25 @@ void Renderer::DrawLava() {
 	quad->Draw();
 }
 
-void Renderer::DrawSkeletalMesh() {
-	BindShader(skinningShader);
+void Renderer::DrawNode(SceneNode* n) {
 
-	
-
-	glUniform1i(glGetUniformLocation(skinningShader->GetProgram(), "diffuseTex"), 0);
-
+	BindShader(modelShader);
 	UpdateShaderMatrices();
 
-	vector<Matrix4> frameMatrices;
-	const Matrix4* invBindPose = mesh->GetInverseBindPose();
-	const Matrix4* frameData = anim->GetJointData(currentFrame);
-
-	for (unsigned int i = 0; i < mesh->GetJointCount(); ++i) {
-		frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
+	if (n->GetMesh()) {
+		Matrix4 model = n->GetWorldTransform() * Matrix4::Scale(n->GetModelScale());
+		glUniformMatrix4fv(glGetUniformLocation(modelShader->GetProgram(), "modelMatrix"), 1, false, model.values);
+		glUniform4fv(glGetUniformLocation(modelShader->GetProgram(), "nodeColour"), 1, (float*)&n->GetColour());
+		modelTexture = n->GetTexture();
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, modelTexture);
+		glUniform1i(glGetUniformLocation(modelShader->GetProgram(), "useTexture"), modelTexture);
 	}
 
-	int j = glGetUniformLocation(skinningShader->GetProgram(), "joints");
-	glUniformMatrix4fv(j, frameMatrices.size(), false, (float*)frameMatrices.data());
+	n->Draw(*this);
 
-	
-
-	for (int i = 0; i < mesh->GetSubMeshCount(); ++i) {
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, matTextures[i]);
-		mesh->DrawSubMesh(i);
+	for (vector<SceneNode*>::const_iterator i = n->GetChildIteratorStart();
+		i != n->GetChildIteratorEnd(); ++i) {
+		DrawNode(*i);
 	}
 }
-

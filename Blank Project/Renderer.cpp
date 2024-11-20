@@ -5,11 +5,14 @@
 #include "../nclgl/MeshAnimation.h"
 #include "../nclgl/MeshMaterial.h"
 #include "Volcano.h"
+#include "BonyWall.h"
+#include "Monster.h"
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	quad = Mesh::GenerateQuad();
 	volcanoMesh = Mesh::LoadFromMeshFile("Volcano.msh");
-
+	bonyWallMesh = Mesh::LoadFromMeshFile("BonyWall.msh");
+	monsterMesh = Mesh::LoadFromMeshFile("Role_T.msh");
 
 	heightMap = new HeightMap(TEXTUREDIR "volcano_heightmap.png");
 	noiseHeightMap = new HeightMap(TEXTUREDIR "noise.png");
@@ -53,6 +56,32 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	rootNode = new SceneNode();
 	rootNode->AddChild(new Volcano(volcanoMesh));
+
+	// Bony Walls (4 walls for each side of the map)
+	// Horizontal walls
+	for (int i = 0; i < 8; i++) {
+		rootNode->AddChild(new BonyWall(bonyWallMesh, Matrix4::Translation(Vector3(7700 - i * 1000, 500, 100))));
+	}
+
+	// Horizontal walls
+	for (int i = 0; i < 8; i++) {
+		rootNode->AddChild(new BonyWall(bonyWallMesh, Matrix4::Translation(Vector3(7700 - i * 1000, 500, 8200))));
+	}
+	
+	// Vertical walls
+	for (int i = 0; i < 8; i++) {
+		Matrix4 transform = Matrix4::Translation(Vector3(200, 500, 1000 + i * 1000)) * Matrix4::Rotation(90.0f, Vector3(0, 1, 0));
+		rootNode->AddChild(new BonyWall(bonyWallMesh, transform));
+	}
+
+	// Vertical walls
+	for (int i = 0; i < 8; i++) {
+		Matrix4 transform = Matrix4::Translation(Vector3(8000, 500, 1000 + i * 1000)) * Matrix4::Rotation(90.0f, Vector3(0, 1, 0));
+		rootNode->AddChild(new BonyWall(bonyWallMesh, transform));
+	}
+
+	// Monsters
+	rootNode->AddChild(new Monster(monsterMesh));
 	
 
 	glEnable(GL_DEPTH_TEST);
@@ -77,6 +106,9 @@ Renderer::~Renderer(void) {
 	// volcano model and shader cleanup
 	delete volcanoMesh;
 	delete modelShader;
+
+	// bony wall
+	delete bonyWallMesh;
 }
 
 void Renderer::UpdateScene(float dt) {

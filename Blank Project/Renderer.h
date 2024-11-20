@@ -49,4 +49,6 @@ protected:
 	SceneNode* rootNode;
 
 	Mesh* volcanoMesh;
+	Mesh* bonyWallMesh;
+	Mesh* monsterMesh;
 };

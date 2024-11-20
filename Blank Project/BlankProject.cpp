@@ -2,7 +2,7 @@
 #include "Renderer.h"
 
 int main() {
-	Window w("Cube Mapping!", 1280, 720, false);
+	Window w("Volcano OpenGL Project!", 1280, 720, false);
 	if (!w.HasInitialised()) {
 		return -1;
 	}

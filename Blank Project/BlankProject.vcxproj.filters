@@ -20,12 +20,24 @@
     <ClCompile Include="Volcano.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="BonyWall.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Monster.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Renderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Volcano.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BonyWall.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Monster.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

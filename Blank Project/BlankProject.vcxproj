@@ -136,7 +136,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="BlankProject.cpp" />
+    <ClCompile Include="Open_GL_Assignment.cpp" />
     <ClCompile Include="BonyWall.cpp" />
     <ClCompile Include="Monster.cpp" />
     <ClCompile Include="Renderer.cpp" />

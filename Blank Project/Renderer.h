@@ -52,6 +52,7 @@ protected:
 	Mesh* volcanoMesh;
 	Mesh* bonyWallMesh;
 	Mesh* monsterMesh;
+	Mesh* volcanicRockMesh;
 
 	Vector3 straightMoveDirection; // Direction for straight camera movement
 	float cameraTime; // Time for camera movement

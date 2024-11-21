@@ -8,6 +8,7 @@
 #include "BonyWall.h"
 #include "Monster.h"
 #include "../nclgl/Math_Utility.h"
+#include "VolcanicRock.h"
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// Load the meshes
@@ -15,6 +16,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	volcanoMesh = Mesh::LoadFromMeshFile("Volcano.msh");
 	bonyWallMesh = Mesh::LoadFromMeshFile("BonyWall.msh");
 	monsterMesh = Mesh::LoadFromMeshFile("Role_T.msh");
+	volcanicRockMesh = Mesh::LoadFromMeshFile("VolcanicRock.msh");
 
 	// Load the heightmaps
 	heightMap = new HeightMap(TEXTUREDIR "volcano_heightmap.png");
@@ -161,8 +163,7 @@ void Renderer::UpdateScene(float dt) {
 		}
 
 		// Add new objects
-		//rootNode->AddChild(new Monster(monsterMesh, Matrix4::Translation(Vector3(5000, 500, 3000))));
-
+		rootNode->AddChild(new VolcanicRock(volcanicRockMesh));
 		sceneChanged = true; // Mark scene as changed
 	}
 

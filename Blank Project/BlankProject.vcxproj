@@ -140,12 +140,14 @@
     <ClCompile Include="BonyWall.cpp" />
     <ClCompile Include="Monster.cpp" />
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="VolcanicRock.cpp" />
     <ClCompile Include="Volcano.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BonyWall.h" />
     <ClInclude Include="Monster.h" />
     <ClInclude Include="Renderer.h" />
+    <ClInclude Include="VolcanicRock.h" />
     <ClInclude Include="Volcano.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

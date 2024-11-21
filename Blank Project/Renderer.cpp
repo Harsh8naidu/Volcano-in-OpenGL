@@ -29,6 +29,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	earthBump = SOIL_load_OGL_texture(TEXTUREDIR "Barren RedsDOT3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
+	flashTexture = SOIL_load_OGL_texture(TEXTUREDIR "full_screen_effect.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+
 	// Load the cubemap
 	cubeMap = SOIL_load_OGL_cubemap(
 		TEXTUREDIR "right.jpg", TEXTUREDIR "left.jpg",
@@ -37,7 +39,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0
 	);
 
-	if (!earthTex || !earthBump || !lavaTex || !cubeMap) {
+	if (!earthTex || !earthBump || !lavaTex || !cubeMap || !flashTexture) {
 		return;
 	}
 
@@ -60,7 +62,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// Set up the camera and light
 	camera = new Camera(-10.0f, 190.0f, heightmapSize * Vector3(0.67f, 2.2f, -0.88f));
-	light = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightmapSize.x);
+
+	// One light for the scene
+	sceneLight = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightmapSize.x);
 
 	// Set up the matrices
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
@@ -117,17 +121,27 @@ Renderer::~Renderer(void) {
 	delete heightMap;
 	delete noiseHeightMap;
 	delete quad;
+
+	// shaders cleanup
 	delete reflectShader;
 	delete skyboxShader;
 	delete lightShader;
-	delete light;
-
-	// volcano model and shader cleanup
-	delete volcanoMesh;
 	delete modelShader;
 
-	// bony wall
+	// light cleanup
+	delete sceneLight;
+
+	// models cleanup
+	delete volcanoMesh;
 	delete bonyWallMesh;
+	delete monsterMesh;
+	delete volcanicRockMesh;
+
+	// textures cleanup
+	glDeleteTextures(1, &lavaTex);
+	glDeleteTextures(1, &earthTex);
+	glDeleteTextures(1, &earthBump);
+	glDeleteTextures(1, &flashTexture);
 }
 
 void Renderer::UpdateScene(float dt) {
@@ -143,9 +157,13 @@ void Renderer::UpdateScene(float dt) {
 	rotationSpeed = 3.0f; // Adjust rotation speed
 	camera->SetYaw(camera->GetYaw() - rotationSpeed * dt); // Rotate left
 
+	// Second Scene (starts here)
 	elapsedTime += dt; // Increment elapsed time
 
 	if (!sceneChanged && elapsedTime >= 130.0f) {
+		isFlashing = true; // Start the full screen effect
+		flashTime = 2.0f;
+
 		// Change the texture of the heightmap
 		GLuint newEarthTexture = SOIL_load_OGL_texture(TEXTUREDIR "snow_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 		if (newEarthTexture) {
@@ -162,9 +180,16 @@ void Renderer::UpdateScene(float dt) {
 			isLavaFlowing = false; // Stop the lava flow
 		}
 
-		// Add new objects
+		// Add new objects for the second scene
 		rootNode->AddChild(new VolcanicRock(volcanicRockMesh));
 		sceneChanged = true; // Mark scene as changed
+	}
+
+	if (isFlashing) {
+		flashTime -= dt; // Decrement flash time
+		if (flashTime <= 0.0f) {
+			isFlashing = false; // Stop the full screen effect
+		}
 	}
 
 	//Update the camera
@@ -186,9 +211,36 @@ void Renderer::RenderScene() {
 	DrawHeightmap();
 	DrawLava();
 	DrawNode(rootNode);
+	CreateFlashEffect();
+}
+
+void Renderer::CreateFlashEffect() {
+	// Render the full screen effect
+	if (isFlashing) {
+		glUseProgram(0); // Use the fixed-function pipeline for simplicity
+
+		// Disable depth testing for fullscreen quad
+		glDisable(GL_DEPTH_TEST);
+
+		// Enable 2D texture
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, flashTexture);
+
+		// Render fullscreen quad
+		glBegin(GL_QUADS);
+		glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, -1.0f); // Bottom-left
+		glTexCoord2f(1.0f, 1.0f); glVertex2f(1.0f, -1.0f); // Bottom-right
+		glTexCoord2f(1.0f, 0.0f); glVertex2f(1.0f, 1.0f); // Top-right
+		glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f, 1.0f); // Top-left
+		glEnd();
+
+		// Restore depth testing
+		glEnable(GL_DEPTH_TEST);
+	}
 }
 
 void Renderer::DrawSkybox() {
+	// Draw the skybox
 	glDepthMask(GL_FALSE);
 
 	BindShader(skyboxShader);
@@ -200,8 +252,9 @@ void Renderer::DrawSkybox() {
 }
 
 void Renderer::DrawHeightmap() {
+	// Draw the heightmap
 	BindShader(lightShader);
-	SetShaderLight(*light);
+	SetShaderLight(*sceneLight);
 	glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 
 	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), 0);
@@ -220,9 +273,9 @@ void Renderer::DrawHeightmap() {
 
 	modelMatrix.ToIdentity();
 
-	// Scaling for the noiseHeightMap only(no scaling for default heightmap)
-	float noiseScaleX = 2.0f;  // Example scale factor for X axis
-	float noiseScaleY = 1.0f;  // Example scale factor for Y axis (adjust as needed)
+	// Scaling for the noiseHeightMap only
+	float noiseScaleX = 2.0f;  // scale factor for X axis
+	float noiseScaleY = 1.0f;  // scale factor for Y axis (adjust as needed)
 	float noiseScaleZ = 2.0f;
 
 	modelMatrix = Matrix4::Scale(Vector3(noiseScaleX, noiseScaleY, noiseScaleZ)) * modelMatrix;
@@ -233,6 +286,7 @@ void Renderer::DrawHeightmap() {
 }
 
 void Renderer::DrawLava() {
+	// Draw the lava
 	BindShader(reflectShader);
 
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "diffuseTex"), 0);
@@ -246,7 +300,7 @@ void Renderer::DrawLava() {
 
 	Vector3 hSize = heightMap->GetHeightmapSize();
 
-	float waterOffset = -20.0f; // Adjust this value to move the water up or down
+	float waterOffset = -20.0f; // Value to move the water up or down
 	modelMatrix = Matrix4::Translation(hSize * Vector3(0.5f, 0.5f, 0.5f)) *
 		Matrix4::Translation(Vector3(0.0f, waterOffset, 0.0f)) * // Move water down
 		Matrix4::Scale(hSize * 0.5f) *
@@ -262,7 +316,7 @@ void Renderer::DrawLava() {
 }
 
 void Renderer::DrawNode(SceneNode* n) {
-
+	// Draw all the children of the node
 	BindShader(modelShader);
 	UpdateShaderMatrices();
 

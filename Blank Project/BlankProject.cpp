@@ -2,7 +2,7 @@
 #include "Renderer.h"
 
 int main() {
-	Window w("Volcano OpenGL Project!", 1280, 720, false);
+	Window w("Volcano OpenGL Project!", 2560, 1440, true);
 	if (!w.HasInitialised()) {
 		return -1;
 	}

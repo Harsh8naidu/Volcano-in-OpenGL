@@ -16,6 +16,7 @@ public:
 	~Renderer(void);
 
 	void RenderScene() override;
+	
 	void UpdateScene(float dt) override;
 
 protected:
@@ -24,6 +25,8 @@ protected:
 	void DrawSkybox();
 	void DrawVolcano();
 	void DrawNode(SceneNode* n);
+
+	void CreateFlashEffect();
 
 	Shader* lightShader;
 	Shader* reflectShader;
@@ -35,7 +38,7 @@ protected:
 
 	Mesh* quad;
 
-	Light* light;
+	Light* sceneLight;
 	Camera* camera;
 
 	GLuint cubeMap;
@@ -62,4 +65,9 @@ protected:
 	float elapsedTime; // To track the elapsed time
 	bool sceneChanged; // To indicate whether the scene has changed
 	bool isLavaFlowing;
+
+	// Full screen effect
+	GLuint flashTexture;
+	bool isFlashing;
+	float flashTime;
 };

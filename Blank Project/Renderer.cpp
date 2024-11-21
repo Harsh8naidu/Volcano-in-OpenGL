@@ -7,22 +7,27 @@
 #include "Volcano.h"
 #include "BonyWall.h"
 #include "Monster.h"
+#include "../nclgl/Math_Utility.h"
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
+	// Load the meshes
 	quad = Mesh::GenerateQuad();
 	volcanoMesh = Mesh::LoadFromMeshFile("Volcano.msh");
 	bonyWallMesh = Mesh::LoadFromMeshFile("BonyWall.msh");
 	monsterMesh = Mesh::LoadFromMeshFile("Role_T.msh");
 
+	// Load the heightmaps
 	heightMap = new HeightMap(TEXTUREDIR "volcano_heightmap.png");
 	noiseHeightMap = new HeightMap(TEXTUREDIR "noise.png");
 
+	// Load the textures
 	lavaTex = SOIL_load_OGL_texture(TEXTUREDIR "lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
 	earthTex = SOIL_load_OGL_texture(TEXTUREDIR "volcanic_rock.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
 	earthBump = SOIL_load_OGL_texture(TEXTUREDIR "Barren RedsDOT3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
+	// Load the cubemap
 	cubeMap = SOIL_load_OGL_cubemap(
 		TEXTUREDIR "right.jpg", TEXTUREDIR "left.jpg",
 		TEXTUREDIR "top.jpg", TEXTUREDIR "bottom.jpg",
@@ -34,10 +39,12 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		return;
 	}
 
+	// Set the texture to repeat
 	SetTextureRepeating(earthTex, true);
 	SetTextureRepeating(earthBump, true);
 	SetTextureRepeating(lavaTex, true);
 
+	// Load the shaders
 	modelShader = new Shader("SceneVertex.glsl", "SceneFragment.glsl");
 	reflectShader = new Shader("reflectVertex.glsl", "reflectFragment.glsl");
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
@@ -49,11 +56,14 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 
-	camera = new Camera(-45.0f, 0.0f, heightmapSize * Vector3(0.5f, 5.0f, 0.5f));
+	// Set up the camera and light
+	camera = new Camera(-10.0f, 190.0f, heightmapSize * Vector3(0.66f, 2.2f, -0.88f));
 	light = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightmapSize.x);
 
+	// Set up the matrices
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
+	// Set up the root node and add the models
 	rootNode = new SceneNode();
 	rootNode->AddChild(new Volcano(volcanoMesh));
 
@@ -83,7 +93,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// Monsters
 	rootNode->AddChild(new Monster(monsterMesh));
 	
+	straightMoveDirection = Vector3(0, 0, 1); // Moving along negative Z-axis
 
+	// Set up OpenGL settings
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -94,6 +106,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 }
 
 Renderer::~Renderer(void) {
+	// Cleanups
 	delete camera;
 	delete heightMap;
 	delete noiseHeightMap;
@@ -112,6 +125,22 @@ Renderer::~Renderer(void) {
 }
 
 void Renderer::UpdateScene(float dt) {
+
+	std::cout << "Yaw: " << camera->GetYaw() << " Pitch: " << camera->GetPitch() << std::endl;
+	std::cout << "Position: " << camera->GetPosition() << std::endl;
+	// Changing camera automatically
+	cameraTime += dt;
+
+	// Move the camera in the straightMoveDirection
+	Vector3 currentPosition = camera->GetPosition();
+	Vector3 newPosition = currentPosition + (straightMoveDirection * dt * 80.0f); // Adjust speed with scalar (100.0f)
+	camera->SetPosition(newPosition);
+
+	// Rotate the camera
+	rotationSpeed = 1.0f; // Adjust rotation speed here
+	camera->SetYaw(camera->GetYaw() - rotationSpeed * dt); // Rotate left
+
+	//Update the camera
 	camera->UpdateCamera(dt);
 	viewMatrix = camera->BuildViewMatrix();
 	lavaRotate += dt * 2.0f; // Rotate the water texture

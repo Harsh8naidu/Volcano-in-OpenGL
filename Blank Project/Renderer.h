@@ -1,5 +1,6 @@
 #pragma once
 #include "../nclgl/OGLRenderer.h"
+#include "../nclgl/Vector3.h"
 
 class Camera;
 class Shader;
@@ -51,4 +52,8 @@ protected:
 	Mesh* volcanoMesh;
 	Mesh* bonyWallMesh;
 	Mesh* monsterMesh;
+
+	Vector3 straightMoveDirection; // Direction for straight camera movement
+	float cameraTime; // Time for camera movement
+	float rotationSpeed; // Rotation speed for camera
 };

@@ -32,6 +32,18 @@ public:
 	float y;
 	float z;
 
+	// Lerp between two vectors
+	static Vector3 Lerp(const Vector3& from, const Vector3& to, float by) {
+		by = Clamp(by, 0.0f, 1.0f);
+		return from * (1 - by) + to * by;
+	}
+
+	template<typename T>
+	static constexpr const T& Clamp(const T& value, const T& lower, const T& upper) {
+		return (value < lower) ? lower : (value > upper) ? upper : value;
+	}
+
+
 	Vector3 Normalised() const {
 		Vector3 n = *this;
 		n.Normalise();

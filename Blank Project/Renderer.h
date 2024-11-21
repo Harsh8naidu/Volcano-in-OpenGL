@@ -56,4 +56,9 @@ protected:
 	Vector3 straightMoveDirection; // Direction for straight camera movement
 	float cameraTime; // Time for camera movement
 	float rotationSpeed; // Rotation speed for camera
+
+	// Scene change
+	float elapsedTime; // To track the elapsed time
+	bool sceneChanged; // To indicate whether the scene has changed
+	bool isLavaFlowing;
 };

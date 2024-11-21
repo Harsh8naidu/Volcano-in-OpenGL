@@ -57,7 +57,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 
 	// Set up the camera and light
-	camera = new Camera(-10.0f, 190.0f, heightmapSize * Vector3(0.66f, 2.2f, -0.88f));
+	camera = new Camera(-10.0f, 190.0f, heightmapSize * Vector3(0.67f, 2.2f, -0.88f));
 	light = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightmapSize.x);
 
 	// Set up the matrices
@@ -95,6 +95,10 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	
 	straightMoveDirection = Vector3(0, 0, 1); // Moving along negative Z-axis
 
+	elapsedTime = 0.0f;
+	sceneChanged = false;
+	isLavaFlowing = true;
+
 	// Set up OpenGL settings
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -125,26 +129,50 @@ Renderer::~Renderer(void) {
 }
 
 void Renderer::UpdateScene(float dt) {
-
-	std::cout << "Yaw: " << camera->GetYaw() << " Pitch: " << camera->GetPitch() << std::endl;
-	std::cout << "Position: " << camera->GetPosition() << std::endl;
 	// Changing camera automatically
 	cameraTime += dt;
 
 	// Move the camera in the straightMoveDirection
 	Vector3 currentPosition = camera->GetPosition();
-	Vector3 newPosition = currentPosition + (straightMoveDirection * dt * 80.0f); // Adjust speed with scalar (100.0f)
+	Vector3 newPosition = currentPosition + (straightMoveDirection * dt * 80.0f); // Adjust speed
 	camera->SetPosition(newPosition);
 
 	// Rotate the camera
-	rotationSpeed = 1.0f; // Adjust rotation speed here
+	rotationSpeed = 3.0f; // Adjust rotation speed
 	camera->SetYaw(camera->GetYaw() - rotationSpeed * dt); // Rotate left
+
+	elapsedTime += dt; // Increment elapsed time
+
+	if (!sceneChanged && elapsedTime >= 130.0f) {
+		// Change the texture of the heightmap
+		GLuint newEarthTexture = SOIL_load_OGL_texture(TEXTUREDIR "snow_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+		if (newEarthTexture) {
+			glDeleteTextures(1, &earthTex); // Delete old texture
+			earthTex = newEarthTexture;         // Assign new texture
+			SetTextureRepeating(earthTex, true);
+		}
+
+		GLuint newLavaTexture = SOIL_load_OGL_texture(TEXTUREDIR "frozen_lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+		if (newLavaTexture) {
+			glDeleteTextures(1, &lavaTex); // Delete old texture
+			lavaTex = newLavaTexture;         // Assign new texture
+			SetTextureRepeating(lavaTex, true);
+			isLavaFlowing = false; // Stop the lava flow
+		}
+
+		// Add new objects
+		//rootNode->AddChild(new Monster(monsterMesh, Matrix4::Translation(Vector3(5000, 500, 3000))));
+
+		sceneChanged = true; // Mark scene as changed
+	}
 
 	//Update the camera
 	camera->UpdateCamera(dt);
 	viewMatrix = camera->BuildViewMatrix();
-	lavaRotate += dt * 2.0f; // Rotate the water texture
-	lavaCycle += dt * 0.25f; // Cycle the water texture
+	if (isLavaFlowing) {
+		lavaRotate += dt * 2.0f; // Rotate the water texture
+		lavaCycle += dt * 0.25f; // Cycle the water texture
+	}
 
 	rootNode->Update(dt);
 

@@ -10,6 +10,9 @@
 #include "../nclgl/Math_Utility.h"
 #include "VolcanicRock.h"
 
+// Please find the screenshots and link to the youtube video in a folder 
+// named "Youtube Video and Screenshots" in the root directory of the project
+
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// Load the meshes
 	quad = Mesh::GenerateQuad();

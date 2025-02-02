@@ -145,6 +145,13 @@ OGLRenderer::OGLRenderer(Window &window)	{
 	window.SetRenderer(this);					//Tell our window about the new renderer! (Which will in turn resize the renderer window to fit...)
 }
 
+//#ifdef _DEBUG  
+//glDebugMessageCallbackARB(&OGLRenderer::DebugCallback, NULL);
+//glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+//#endif
+
+
+
 /*
 Destructor. Deletes the default shader, and the OpenGL rendering context.
 */
@@ -233,44 +240,44 @@ void OGLRenderer::SetShaderLight(const Light& l)
 }
 
 #ifdef OPENGL_DEBUGGING
-void OGLRenderer::DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)	{
-		string sourceName;
-		string typeName;
-		string severityName;
-
-		if (type == GL_DEBUG_TYPE_OTHER_ARB) {
-			return;
-		}
-
-		switch(source) {
-			case GL_DEBUG_SOURCE_API_ARB			: sourceName = "Source(OpenGL)"			;break;
-			case GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB	: sourceName = "Source(Window System)"	;break;
-			case GL_DEBUG_SOURCE_SHADER_COMPILER_ARB: sourceName = "Source(Shader Compiler)";break;
-			case GL_DEBUG_SOURCE_THIRD_PARTY_ARB	: sourceName = "Source(Third Party)"	;break;
-			case GL_DEBUG_SOURCE_APPLICATION_ARB	: sourceName = "Source(Application)"	;break;
-			case GL_DEBUG_SOURCE_OTHER_ARB			: sourceName = "Source(Other)"			;break;
-		}
-
-		switch(type) {
-			case GL_DEBUG_TYPE_ERROR_ARB				: typeName = "Type(Error)"					;break;
-			case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB	: typeName = "Type(Deprecated Behaviour)"	;break;
-			case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB	: typeName = "Type(Undefined Behaviour)"	;break;
-			case GL_DEBUG_TYPE_PORTABILITY_ARB			: typeName = "Type(Portability)"			;break;
-			case GL_DEBUG_TYPE_PERFORMANCE_ARB			: typeName = "Type(Performance)"			;break;
-			case GL_DEBUG_TYPE_OTHER_ARB				: typeName = "Type(Other)"					;break;
-			default: {
-				return;
-			}
-		}
-
-		switch(severity) {
-			case GL_DEBUG_SEVERITY_HIGH_ARB		: severityName = "Priority(High)"		;break;
-			case GL_DEBUG_SEVERITY_MEDIUM_ARB	: severityName = "Priority(Medium)"		;break;
-			case GL_DEBUG_SEVERITY_LOW_ARB		: severityName = "Priority(Low)"		;break;
-		}
-
-		std::cout << "OpenGL Debug Output: " + sourceName + ", " + typeName + ", " + severityName + ", " + string(message) << "\n";
-}
+//void OGLRenderer::DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)	{
+//		string sourceName;
+//		string typeName;
+//		string severityName;
+//
+//		if (type == GL_DEBUG_TYPE_OTHER_ARB) {
+//			return;
+//		}
+//
+//		switch(source) {
+//			case GL_DEBUG_SOURCE_API_ARB			: sourceName = "Source(OpenGL)"			;break;
+//			case GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB	: sourceName = "Source(Window System)"	;break;
+//			case GL_DEBUG_SOURCE_SHADER_COMPILER_ARB: sourceName = "Source(Shader Compiler)";break;
+//			case GL_DEBUG_SOURCE_THIRD_PARTY_ARB	: sourceName = "Source(Third Party)"	;break;
+//			case GL_DEBUG_SOURCE_APPLICATION_ARB	: sourceName = "Source(Application)"	;break;
+//			case GL_DEBUG_SOURCE_OTHER_ARB			: sourceName = "Source(Other)"			;break;
+//		}
+//
+//		switch(type) {
+//			case GL_DEBUG_TYPE_ERROR_ARB				: typeName = "Type(Error)"					;break;
+//			case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB	: typeName = "Type(Deprecated Behaviour)"	;break;
+//			case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB	: typeName = "Type(Undefined Behaviour)"	;break;
+//			case GL_DEBUG_TYPE_PORTABILITY_ARB			: typeName = "Type(Portability)"			;break;
+//			case GL_DEBUG_TYPE_PERFORMANCE_ARB			: typeName = "Type(Performance)"			;break;
+//			case GL_DEBUG_TYPE_OTHER_ARB				: typeName = "Type(Other)"					;break;
+//			default: {
+//				return;
+//			}
+//		}
+//
+//		switch(severity) {
+//			case GL_DEBUG_SEVERITY_HIGH_ARB		: severityName = "Priority(High)"		;break;
+//			case GL_DEBUG_SEVERITY_MEDIUM_ARB	: severityName = "Priority(Medium)"		;break;
+//			case GL_DEBUG_SEVERITY_LOW_ARB		: severityName = "Priority(Low)"		;break;
+//		}
+//
+//		std::cout << "OpenGL Debug Output: " + sourceName + ", " + typeName + ", " + severityName + ", " + string(message) << "\n";
+//}
 #endif
 
 

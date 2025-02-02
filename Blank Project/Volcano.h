@@ -3,8 +3,6 @@
 
 class Volcano : public SceneNode {
 public:
-	Volcano(Mesh* volcanoMesh);
+	Volcano(Mesh* volcanoMesh, GLuint volcanoTexture);
 	~Volcano(void) {};
-protected:
-	GLuint volcanoTex;
 };

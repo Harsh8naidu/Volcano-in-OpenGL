@@ -3,8 +3,6 @@
 
 class Monster : public SceneNode {
 public:
-	Monster(Mesh* monsterMesh);
+	Monster(Mesh* monsterMesh, GLuint monsterTexture);
 	~Monster(void) {};
-protected:
-	GLuint monsterTex;
 };

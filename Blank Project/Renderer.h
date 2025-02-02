@@ -1,6 +1,7 @@
 #pragma once
 #include "../nclgl/OGLRenderer.h"
 #include "../nclgl/Vector3.h"
+#include "ObjModel.h"
 
 class Camera;
 class Shader;
@@ -32,6 +33,8 @@ protected:
 	Shader* reflectShader;
 	Shader* skyboxShader;
 	Shader* modelShader;
+	Shader* flashShader;
+	Shader* objModelShader;
 
 	HeightMap* heightMap;
 	HeightMap* noiseHeightMap;
@@ -46,6 +49,11 @@ protected:
 	GLuint earthTex;
 	GLuint earthBump;
 	GLuint modelTexture;
+	GLuint bonyWallTexture;
+	GLuint volcanoTexture;
+	GLuint monsterTexture;
+	GLuint snowTexture;
+	GLuint frozenLavaTexture;
 
 	float lavaRotate;
 	float lavaCycle;
@@ -70,4 +78,7 @@ protected:
 	GLuint flashTexture;
 	bool isFlashing;
 	float flashTime;
+
+	// .obj objects
+	ObjModel* testObjModel;
 };

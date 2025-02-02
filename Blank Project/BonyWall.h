@@ -3,8 +3,6 @@
 
 class BonyWall : public SceneNode {
 public:
-	BonyWall(Mesh* bonyWallMesh, const Matrix4& transform);
+	BonyWall(Mesh* bonyWallMesh, const Matrix4& transform, GLuint bonyWallTexture);
 	~BonyWall(void) {};
-protected:
-	GLuint bonyWallTex;
 };

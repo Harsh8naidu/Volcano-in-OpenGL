@@ -57,6 +57,10 @@ public:
 	void			SwapBuffers();
 
 	bool			HasInitialised() const;	
+
+	const Matrix4& GetModelMatrix() const { return modelMatrix; }
+	const Matrix4& GetViewMatrix() const { return viewMatrix; }
+	const Matrix4& GetProjMatrix() const { return projMatrix; }
 	
 protected:
 	virtual void	Resize(int x, int y);	

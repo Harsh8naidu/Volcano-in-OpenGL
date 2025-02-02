@@ -136,6 +136,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="MaterialLoader.cpp" />
+    <ClCompile Include="ModelLoader.cpp" />
     <ClCompile Include="Open_GL_Assignment.cpp" />
     <ClCompile Include="BonyWall.cpp" />
     <ClCompile Include="Monster.cpp" />
@@ -145,7 +147,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BonyWall.h" />
+    <ClInclude Include="MaterialLoader.h" />
+    <ClInclude Include="ModelLoader.h" />
     <ClInclude Include="Monster.h" />
+    <ClInclude Include="ObjModel.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="VolcanicRock.h" />
     <ClInclude Include="Volcano.h" />

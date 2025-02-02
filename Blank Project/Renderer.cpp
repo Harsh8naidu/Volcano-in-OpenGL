@@ -14,6 +14,10 @@
 // named "Youtube Video and Screenshots" in the root directory of the project
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
+	
+	// Load .obj files
+	testObjModel = new ObjModel(MODELDIR "Mug.obj", MATERIALDIR "Mug.mtl");
+
 	// Load the meshes
 	quad = Mesh::GenerateQuad();
 	volcanoMesh = Mesh::LoadFromMeshFile("Volcano.msh");
@@ -34,6 +38,16 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	flashTexture = SOIL_load_OGL_texture(TEXTUREDIR "full_screen_effect.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
+	bonyWallTexture = SOIL_load_OGL_texture(TEXTUREDIR"bonywall_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
+
+	volcanoTexture = SOIL_load_OGL_texture(TEXTUREDIR"volcano_molten_lava.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
+
+	monsterTexture = SOIL_load_OGL_texture(TEXTUREDIR"metallic_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
+
+	snowTexture = SOIL_load_OGL_texture(TEXTUREDIR "snow_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+
+	frozenLavaTexture = SOIL_load_OGL_texture(TEXTUREDIR "frozen_lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+
 	// Load the cubemap
 	cubeMap = SOIL_load_OGL_cubemap(
 		TEXTUREDIR "right.jpg", TEXTUREDIR "left.jpg",
@@ -52,12 +66,14 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	SetTextureRepeating(lavaTex, true);
 
 	// Load the shaders
+	objModelShader = new Shader(SHADERDIR "modelVertexShader.glsl",SHADERDIR "modelFragmentShader.glsl");
 	modelShader = new Shader("SceneVertex.glsl", "SceneFragment.glsl");
 	reflectShader = new Shader("reflectVertex.glsl", "reflectFragment.glsl");
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
 	lightShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
+	flashShader = new Shader("flashVertex.glsl", "flashFragment.glsl");
 
-	if (!reflectShader->LoadSuccess() || !skyboxShader->LoadSuccess() || !lightShader->LoadSuccess()) {
+	if (!reflectShader->LoadSuccess() || !skyboxShader->LoadSuccess() || !lightShader->LoadSuccess() || !flashShader->LoadSuccess()) {
 		return;
 	}
 
@@ -74,33 +90,33 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// Set up the root node and add the models
 	rootNode = new SceneNode();
-	rootNode->AddChild(new Volcano(volcanoMesh));
+	rootNode->AddChild(new Volcano(volcanoMesh, volcanoTexture));
 
 	// Bony Walls (4 walls for each side of the map)
 	// Horizontal walls
 	for (int i = 0; i < 8; i++) {
-		rootNode->AddChild(new BonyWall(bonyWallMesh, Matrix4::Translation(Vector3(7700 - i * 1000, 500, 100))));
+		rootNode->AddChild(new BonyWall(bonyWallMesh, Matrix4::Translation(Vector3(7700 - i * 1000, 500, 100)), bonyWallTexture));
 	}
 
 	// Horizontal walls
 	for (int i = 0; i < 8; i++) {
-		rootNode->AddChild(new BonyWall(bonyWallMesh, Matrix4::Translation(Vector3(7700 - i * 1000, 500, 8200))));
+		rootNode->AddChild(new BonyWall(bonyWallMesh, Matrix4::Translation(Vector3(7700 - i * 1000, 500, 8200)), bonyWallTexture));
 	}
 	
 	// Vertical walls
 	for (int i = 0; i < 8; i++) {
 		Matrix4 transform = Matrix4::Translation(Vector3(200, 500, 1000 + i * 1000)) * Matrix4::Rotation(90.0f, Vector3(0, 1, 0));
-		rootNode->AddChild(new BonyWall(bonyWallMesh, transform));
+		rootNode->AddChild(new BonyWall(bonyWallMesh, transform, bonyWallTexture));
 	}
 
 	// Vertical walls
 	for (int i = 0; i < 8; i++) {
 		Matrix4 transform = Matrix4::Translation(Vector3(8000, 500, 1000 + i * 1000)) * Matrix4::Rotation(90.0f, Vector3(0, 1, 0));
-		rootNode->AddChild(new BonyWall(bonyWallMesh, transform));
+		rootNode->AddChild(new BonyWall(bonyWallMesh, transform, bonyWallTexture));
 	}
 
 	// Monsters
-	rootNode->AddChild(new Monster(monsterMesh));
+	rootNode->AddChild(new Monster(monsterMesh, monsterTexture));
 	
 	straightMoveDirection = Vector3(0, 0, 1); // Moving along negative Z-axis
 
@@ -130,6 +146,7 @@ Renderer::~Renderer(void) {
 	delete skyboxShader;
 	delete lightShader;
 	delete modelShader;
+	delete flashShader;
 
 	// light cleanup
 	delete sceneLight;
@@ -145,6 +162,9 @@ Renderer::~Renderer(void) {
 	glDeleteTextures(1, &earthTex);
 	glDeleteTextures(1, &earthBump);
 	glDeleteTextures(1, &flashTexture);
+
+	// objects cleanup
+	delete testObjModel;
 }
 
 void Renderer::UpdateScene(float dt) {
@@ -168,17 +188,15 @@ void Renderer::UpdateScene(float dt) {
 		flashTime = 2.0f;
 
 		// Change the texture of the heightmap
-		GLuint newEarthTexture = SOIL_load_OGL_texture(TEXTUREDIR "snow_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-		if (newEarthTexture) {
+		if (snowTexture) {
 			glDeleteTextures(1, &earthTex); // Delete old texture
-			earthTex = newEarthTexture;         // Assign new texture
+			earthTex = snowTexture;         // Assign new texture
 			SetTextureRepeating(earthTex, true);
 		}
 
-		GLuint newLavaTexture = SOIL_load_OGL_texture(TEXTUREDIR "frozen_lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-		if (newLavaTexture) {
+		if (frozenLavaTexture) {
 			glDeleteTextures(1, &lavaTex); // Delete old texture
-			lavaTex = newLavaTexture;         // Assign new texture
+			lavaTex = frozenLavaTexture;         // Assign new texture
 			SetTextureRepeating(lavaTex, true);
 			isLavaFlowing = false; // Stop the lava flow
 		}
@@ -214,31 +232,29 @@ void Renderer::RenderScene() {
 	DrawHeightmap();
 	DrawLava();
 	DrawNode(rootNode);
-	CreateFlashEffect();
+	//CreateFlashEffect(); // Not working
+
+	testObjModel->Render(objModelShader, modelMatrix, viewMatrix, projMatrix);
 }
 
 void Renderer::CreateFlashEffect() {
 	// Render the full screen effect
 	if (isFlashing) {
-		glUseProgram(0); // Use the fixed-function pipeline for simplicity
+		BindShader(flashShader); // Use the custom flash shader
 
-		// Disable depth testing for fullscreen quad
-		glDisable(GL_DEPTH_TEST);
+		// Update projection and model-view matrices for the fullscreen quad
+		projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
+		modelMatrix.ToIdentity();
+		viewMatrix.ToIdentity();
+		UpdateShaderMatrices();
 
-		// Enable 2D texture
-		glEnable(GL_TEXTURE_2D);
+		// Bind the flash texture
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, flashTexture);
+		glUniform1i(glGetUniformLocation(flashShader->GetProgram(), "flashTex"), 0);
 
-		// Render fullscreen quad
-		glBegin(GL_QUADS);
-		glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, -1.0f); // Bottom-left
-		glTexCoord2f(1.0f, 1.0f); glVertex2f(1.0f, -1.0f); // Bottom-right
-		glTexCoord2f(1.0f, 0.0f); glVertex2f(1.0f, 1.0f); // Top-right
-		glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f, 1.0f); // Top-left
-		glEnd();
-
-		// Restore depth testing
-		glEnable(GL_DEPTH_TEST);
+		// Draw the full-screen quad
+		quad->Draw();
 	}
 }
 
@@ -248,6 +264,9 @@ void Renderer::DrawSkybox() {
 
 	BindShader(skyboxShader);
 	UpdateShaderMatrices();
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
 
 	quad->Draw();
 
@@ -297,9 +316,6 @@ void Renderer::DrawLava() {
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, lavaTex);
-
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
 
 	Vector3 hSize = heightMap->GetHeightmapSize();
 

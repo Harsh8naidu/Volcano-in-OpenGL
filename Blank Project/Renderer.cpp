@@ -36,7 +36,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	earthBump = SOIL_load_OGL_texture(TEXTUREDIR "Barren RedsDOT3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
-	flashTexture = SOIL_load_OGL_texture(TEXTUREDIR "full_screen_effect.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	//flashTexture = SOIL_load_OGL_texture(TEXTUREDIR "full_screen_effect.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
 	bonyWallTexture = SOIL_load_OGL_texture(TEXTUREDIR"bonywall_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
 
@@ -56,7 +56,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0
 	);
 
-	if (!earthTex || !earthBump || !lavaTex || !cubeMap || !flashTexture) {
+	if (!earthTex || !earthBump || !lavaTex || !cubeMap) {
 		return;
 	}
 
@@ -66,7 +66,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	SetTextureRepeating(lavaTex, true);
 
 	// Load the shaders
-	objModelShader = new Shader(SHADERDIR "modelVertexShader.glsl",SHADERDIR "modelFragmentShader.glsl");
+	objModelShader = new Shader("modelVertexShader.glsl", "modelFragmentShader.glsl");
 	modelShader = new Shader("SceneVertex.glsl", "SceneFragment.glsl");
 	reflectShader = new Shader("reflectVertex.glsl", "reflectFragment.glsl");
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
@@ -90,33 +90,33 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// Set up the root node and add the models
 	rootNode = new SceneNode();
-	rootNode->AddChild(new Volcano(volcanoMesh, volcanoTexture));
+	//rootNode->AddChild(new Volcano(volcanoMesh, volcanoTexture));
 
-	// Bony Walls (4 walls for each side of the map)
-	// Horizontal walls
-	for (int i = 0; i < 8; i++) {
-		rootNode->AddChild(new BonyWall(bonyWallMesh, Matrix4::Translation(Vector3(7700 - i * 1000, 500, 100)), bonyWallTexture));
-	}
+	//// Bony Walls (4 walls for each side of the map)
+	//// Horizontal walls
+	//for (int i = 0; i < 8; i++) {
+	//	rootNode->AddChild(new BonyWall(bonyWallMesh, Matrix4::Translation(Vector3(7700 - i * 1000, 500, 100)), bonyWallTexture));
+	//}
 
-	// Horizontal walls
-	for (int i = 0; i < 8; i++) {
-		rootNode->AddChild(new BonyWall(bonyWallMesh, Matrix4::Translation(Vector3(7700 - i * 1000, 500, 8200)), bonyWallTexture));
-	}
-	
-	// Vertical walls
-	for (int i = 0; i < 8; i++) {
-		Matrix4 transform = Matrix4::Translation(Vector3(200, 500, 1000 + i * 1000)) * Matrix4::Rotation(90.0f, Vector3(0, 1, 0));
-		rootNode->AddChild(new BonyWall(bonyWallMesh, transform, bonyWallTexture));
-	}
+	//// Horizontal walls
+	//for (int i = 0; i < 8; i++) {
+	//	rootNode->AddChild(new BonyWall(bonyWallMesh, Matrix4::Translation(Vector3(7700 - i * 1000, 500, 8200)), bonyWallTexture));
+	//}
+	//
+	//// Vertical walls
+	//for (int i = 0; i < 8; i++) {
+	//	Matrix4 transform = Matrix4::Translation(Vector3(200, 500, 1000 + i * 1000)) * Matrix4::Rotation(90.0f, Vector3(0, 1, 0));
+	//	rootNode->AddChild(new BonyWall(bonyWallMesh, transform, bonyWallTexture));
+	//}
 
-	// Vertical walls
-	for (int i = 0; i < 8; i++) {
-		Matrix4 transform = Matrix4::Translation(Vector3(8000, 500, 1000 + i * 1000)) * Matrix4::Rotation(90.0f, Vector3(0, 1, 0));
-		rootNode->AddChild(new BonyWall(bonyWallMesh, transform, bonyWallTexture));
-	}
+	//// Vertical walls
+	//for (int i = 0; i < 8; i++) {
+	//	Matrix4 transform = Matrix4::Translation(Vector3(8000, 500, 1000 + i * 1000)) * Matrix4::Rotation(90.0f, Vector3(0, 1, 0));
+	//	rootNode->AddChild(new BonyWall(bonyWallMesh, transform, bonyWallTexture));
+	//}
 
-	// Monsters
-	rootNode->AddChild(new Monster(monsterMesh, monsterTexture));
+	//// Monsters
+	//rootNode->AddChild(new Monster(monsterMesh, monsterTexture));
 	
 	straightMoveDirection = Vector3(0, 0, 1); // Moving along negative Z-axis
 
@@ -147,6 +147,7 @@ Renderer::~Renderer(void) {
 	delete lightShader;
 	delete modelShader;
 	delete flashShader;
+	//delete objModelShader;
 
 	// light cleanup
 	delete sceneLight;
@@ -161,7 +162,7 @@ Renderer::~Renderer(void) {
 	glDeleteTextures(1, &lavaTex);
 	glDeleteTextures(1, &earthTex);
 	glDeleteTextures(1, &earthBump);
-	glDeleteTextures(1, &flashTexture);
+	//glDeleteTextures(1, &flashTexture);
 
 	// objects cleanup
 	delete testObjModel;
@@ -231,32 +232,77 @@ void Renderer::RenderScene() {
 	DrawSkybox();
 	DrawHeightmap();
 	DrawLava();
+	DrawMug();
 	DrawNode(rootNode);
 	//CreateFlashEffect(); // Not working
-
-	testObjModel->Render(objModelShader, modelMatrix, viewMatrix, projMatrix);
 }
 
-void Renderer::CreateFlashEffect() {
-	// Render the full screen effect
-	if (isFlashing) {
-		BindShader(flashShader); // Use the custom flash shader
+void Renderer::DrawMug() {
+	BindShader(objModelShader);
 
-		// Update projection and model-view matrices for the fullscreen quad
-		projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
-		modelMatrix.ToIdentity();
-		viewMatrix.ToIdentity();
-		UpdateShaderMatrices();
+	// Set the position and scale of the mug
+	Vector3 mugPosition = Vector3(0.0f, -20.0f, 0.0f);  // Position near the lava (adjust as needed)
+	Vector3 mugScale = Vector3(10.0f, 10.0f, 10.0f);     // Scale the mug (adjust as needed)
 
-		// Bind the flash texture
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, flashTexture);
-		glUniform1i(glGetUniformLocation(flashShader->GetProgram(), "flashTex"), 0);
+	// Apply transformation (translation and scale)
+	modelMatrix = Matrix4::Translation(mugPosition) * Matrix4::Scale(mugScale);
 
-		// Draw the full-screen quad
-		quad->Draw();
+	// Bind the material properties to the shader
+	if (testObjModel->material) {
+		Material* mat = testObjModel->material;
+		std::cout << "Material: " << mat->name << std::endl;
+
+		// Bind the other material properties (if available/necessary)
+		glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "shininess"), mat->shininess);
+		glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "ambient"), 1, (float*)&mat->ambient);
+		glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "specular"), 1, (float*)&mat->specular);
+		glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "emission"), 1, (float*)&mat->emission);
+		glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "ior"), mat->ior);
+		glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "dissolveFactor"), mat->dissolveFactor);
+		glUniform1i(glGetUniformLocation(objModelShader->GetProgram(), "illuminationModel"), mat->illuminationModel);
+
+		std::cout << "Diffuse texture: " << mat->diffuseTexture << std::endl;
+		// Bind the diffuse texture
+		if (mat->diffuseTexture > 0) {
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, mat->diffuseTexture);
+			glUniform1i(glGetUniformLocation(objModelShader->GetProgram(), "diffuseTexture"), 0);
+		}
 	}
+
+	glBindBuffer(GL_ARRAY_BUFFER, testObjModel->modelVBO); // Bind the VBO
+
+	glBindVertexArray(testObjModel->modelVAO); // Bind the VAO
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, testObjModel->modelEBO); // Bind the EBO
+
+	// Draw the model
+	glDrawElements(GL_TRIANGLES, testObjModel->indices, GL_UNSIGNED_INT, 0);
+	// Unbind the VAO
+	glBindVertexArray(0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
+
+//void Renderer::CreateFlashEffect() {
+//	// Render the full screen effect
+//	if (isFlashing) {
+//		BindShader(flashShader); // Use the custom flash shader
+//
+//		// Update projection and model-view matrices for the fullscreen quad
+//		projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
+//		modelMatrix.ToIdentity();
+//		viewMatrix.ToIdentity();
+//		UpdateShaderMatrices();
+//
+//		// Bind the flash texture
+//		glActiveTexture(GL_TEXTURE0);
+//		glBindTexture(GL_TEXTURE_2D, flashTexture);
+//		glUniform1i(glGetUniformLocation(flashShader->GetProgram(), "flashTex"), 0);
+//
+//		// Draw the full-screen quad
+//		quad->Draw();
+//	}
+//}
 
 void Renderer::DrawSkybox() {
 	// Draw the skybox

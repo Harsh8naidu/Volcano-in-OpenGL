@@ -15,9 +15,8 @@ struct Material {
     float ior;   // Ni
     float dissolveFactor; // d
     int illuminationModel; // illum
-    std::string diffuseTexture;  // map_Kd
-    std::string bumpTexture; // map_Bump
-    GLuint textureID;
+    GLuint diffuseTexture;  // map_Kd
+    GLuint bumpTexture; // map_Bump
 
     Material();
 };

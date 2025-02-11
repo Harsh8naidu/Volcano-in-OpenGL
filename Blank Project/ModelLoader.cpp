@@ -60,9 +60,9 @@ bool ModelLoader::LoadOBJ(const std::string& filePath) {
     // Combine indices into vertices
     for (size_t i = 0; i < positionIndices.size(); ++i) {
         Vertex vertex = {};
-        vertex.position = positions[positionIndices[i]];
-        vertex.texCoord = texCoords[texCoordIndices[i]];
-        vertex.normal = normals[normalIndices[i]];
+        vertex.v_position = positions[positionIndices[i]];
+        vertex.v_texCoord = texCoords[texCoordIndices[i]];
+        vertex.v_normal = normals[normalIndices[i]];
         vertices.push_back(vertex);
         indices.push_back(static_cast<unsigned int>(i)); // Directly map index
     }

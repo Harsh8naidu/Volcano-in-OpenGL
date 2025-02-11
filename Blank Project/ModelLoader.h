@@ -8,9 +8,9 @@
 
 // Structure to hold vertex data
 struct Vertex {
-    Vector3 position;
-    Vector2 texCoord;
-    Vector3 normal;
+    Vector3 v_position;
+    Vector2 v_texCoord;
+    Vector3 v_normal;
 };
 
 // ModelLoader class to handle loading the OBJ file

@@ -17,6 +17,8 @@ public:
 	~Renderer(void);
 
 	void RenderScene() override;
+
+	void DrawMug();
 	
 	void UpdateScene(float dt) override;
 
@@ -75,7 +77,7 @@ protected:
 	bool isLavaFlowing;
 
 	// Full screen effect
-	GLuint flashTexture;
+	//GLuint flashTexture;
 	bool isFlashing;
 	float flashTime;
 

@@ -13,10 +13,9 @@ Material::Material()
     ior(1.0f),
     dissolveFactor(1.0f),
     illuminationModel(0),
-    diffuseTexture(""),
-    bumpTexture(""),
-    textureID(0) {}
-
+    diffuseTexture(0.0f),
+    bumpTexture(0.0f)
+    {}
 
 bool MaterialLoader::LoadMTL(const std::string& filePath) {
     std::ifstream file(filePath);
@@ -52,6 +51,9 @@ bool MaterialLoader::LoadMTL(const std::string& filePath) {
         else if (type == "Ks") { // Specular color
             lineStream >> currentMaterial.specular.x >> currentMaterial.specular.y >> currentMaterial.specular.z;
         }
+        else if (type == "Kd") { // Diffuse color
+            lineStream >> currentMaterial.diffuseTexture;
+        }
         else if (type == "Ke") { // Emission color
             lineStream >> currentMaterial.emission.x >> currentMaterial.emission.y >> currentMaterial.emission.z;
         }
@@ -63,20 +65,6 @@ bool MaterialLoader::LoadMTL(const std::string& filePath) {
         }
         else if (type == "illum") { // Illumination model
             lineStream >> currentMaterial.illuminationModel;
-        }
-        else if (type == "map_Kd") { // Diffuse texture map
-            lineStream >> currentMaterial.diffuseTexture;
-
-			// Loading the textures immediately and storing the texture ID in the material
-			currentMaterial.textureID = SOIL_load_OGL_texture(
-                currentMaterial.diffuseTexture.c_str(),
-                SOIL_LOAD_AUTO, 
-                SOIL_CREATE_NEW_ID, 
-                SOIL_FLAG_MIPMAPS
-            );
-        }
-        else if (type == "map_Bump") { // Bump map
-            lineStream >> currentMaterial.bumpTexture;
         }
     }
 

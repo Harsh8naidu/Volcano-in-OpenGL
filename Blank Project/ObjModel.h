@@ -4,11 +4,13 @@
 #include "MaterialLoader.h"
 #include <SOIL/SOIL.h>
 #include <nclgl/OGLRenderer.h>
+#include <vector>
+#include <string>
 
 class ObjModel {
 public:
     ModelLoader* modelLoader;   // Model loader for handling the geometry (vertices, indices)
-    MaterialLoader* materialLoader;   // Material loader for handling materials
+	MaterialLoader* materialLoader; // Material loader for handling the material properties
     GLuint modelTextureID;   // Texture ID for the model
     GLuint modelVAO;         // Vertex Array Object for the model
 	GLuint modelVBO;         // Vertex Buffer Object for the model
@@ -21,12 +23,9 @@ public:
         // Load the model (geometry)
         modelLoader = new ModelLoader(objFilePath);
 
-		// Load the material
+		// Load the material properties
 		materialLoader = new MaterialLoader();
 		materialLoader->LoadMTL(mtlFilePath);
-
-		// Get the material
-		material = materialLoader->GetMaterialByName("default_material_name");
 
 		// Initialize the indices
 		indices = modelLoader->indices.size();
@@ -65,11 +64,15 @@ public:
 
     ~ObjModel() {
         delete modelLoader;
-        delete materialLoader;
         glDeleteVertexArrays(1, &modelVAO);  // Clean up the VAO
 		glDeleteBuffers(1, &modelVBO);       // Clean up the VBO
 		glDeleteBuffers(1, &modelEBO);       // Clean up the EBO
     }
+
+    // Getter function to access the materials from the Material Loader
+	const std::vector<Material>& GetMaterials() const {
+		return materialLoader->GetMaterials();
+	}
 
     GLuint getVAO() const {
         return modelVAO;

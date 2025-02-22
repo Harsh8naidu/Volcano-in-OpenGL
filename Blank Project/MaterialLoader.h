@@ -24,7 +24,6 @@ struct Material {
 class MaterialLoader {
 public:
     bool LoadMTL(const std::string& filePath);
-    Material* GetMaterialByName(const std::string& materialName);
     const std::vector<Material>& GetMaterials() const { return materials; }
 
 private:

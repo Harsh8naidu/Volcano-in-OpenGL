@@ -31,20 +31,20 @@ protected:
 
 	void CreateFlashEffect();
 
-	Shader* lightShader;
-	Shader* reflectShader;
-	Shader* skyboxShader;
-	Shader* modelShader;
-	Shader* flashShader;
-	Shader* objModelShader;
+	Shader* lightShader = nullptr;
+	Shader* reflectShader = nullptr;
+	Shader* skyboxShader = nullptr;
+	Shader* modelShader = nullptr;
+	Shader* flashShader = nullptr;
+	Shader* objModelShader = nullptr;
 
-	HeightMap* heightMap;
-	HeightMap* noiseHeightMap;
+	HeightMap* heightMap = nullptr;
+	HeightMap* noiseHeightMap = nullptr;
 
-	Mesh* quad;
+	Mesh* quad = nullptr;
 
-	Light* sceneLight;
-	Camera* camera;
+	Light* sceneLight = nullptr;
+	Camera* camera = nullptr;
 
 	GLuint cubeMap;
 	GLuint lavaTex;
@@ -60,12 +60,12 @@ protected:
 	float lavaRotate;
 	float lavaCycle;
 
-	SceneNode* rootNode;
+	SceneNode* rootNode = nullptr;
 
-	Mesh* volcanoMesh;
-	Mesh* bonyWallMesh;
-	Mesh* monsterMesh;
-	Mesh* volcanicRockMesh;
+	Mesh* volcanoMesh = nullptr;
+	Mesh* bonyWallMesh = nullptr;
+	Mesh* monsterMesh = nullptr;
+	Mesh* volcanicRockMesh = nullptr;
 
 	Vector3 straightMoveDirection; // Direction for straight camera movement
 	float cameraTime; // Time for camera movement
@@ -82,5 +82,5 @@ protected:
 	float flashTime;
 
 	// .obj objects
-	ObjModel* testObjModel;
+	ObjModel* testObjModel = nullptr;
 };

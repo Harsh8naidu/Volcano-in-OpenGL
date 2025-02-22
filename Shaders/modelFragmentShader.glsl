@@ -8,35 +8,40 @@ out vec4 FragColor;        // Final color output
 
 uniform sampler2D diffuseTexture; // Diffuse texture
 uniform float shininess;          // Shininess factor
-uniform vec3 ambient;        // Ambient color
-uniform vec3 specular;       // Specular color
-uniform vec3 emission;       // Emission color
+uniform vec3 ambient;             // Ambient color
+uniform vec3 specular;            // Specular color
+uniform vec3 emission;            // Emission color
 uniform float ior;                // Index of refraction
 uniform float dissolveFactor;     // Dissolve factor for transparency
 uniform int illuminationModel;    // Illumination model selector
+uniform vec3 lightDir;            // Light direction (passed as a uniform)
 
 void main() {
+    // Normalize the input normal
+    vec3 norm = normalize(normal);
+
     // Ambient component
-    vec3 ambient = ambientColor;
+    vec3 ambientComponent = ambient;
 
     // Diffuse component
-    vec3 diffuse = (texture(diffuseTexture, texCoord).rgb != vec3(0.0)) ? texture(diffuseTexture, texCoord).rgb : vec3(1.0);
+    vec3 diffuseColor = texture(diffuseTexture, texCoord).rgb;
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuseComponent = diff * diffuseColor;
 
     // Specular component
-    vec3 viewDir = normalize(-fragPos);  // View direction (camera at the origin)
-    vec3 lightDir = normalize(vec3(0.0, 0.0, 1.0));  // Example light direction
-    vec3 reflectDir = reflect(-lightDir, normalize(normal));  // Reflection direction
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);  // Specular intensity
-    vec3 specular = spec * specularColor;
+    vec3 viewDir = normalize(-fragPos);  // Assume the camera is at the origin
+    vec3 reflectDir = reflect(-lightDir, norm);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+    vec3 specularComponent = spec * specular;
 
     // Emission component
-    vec3 emission = emissionColor;
+    vec3 emissionComponent = emission;
 
     // Combine the components based on the illumination model
-    vec3 finalColor = ambient + diffuse + specular + emission;
+    vec3 finalColor = ambientComponent + diffuseComponent + specularComponent + emissionComponent;
 
     // Apply dissolve effect (transparency based on the dissolve factor)
     float alpha = 1.0 - dissolveFactor;
 
-    FragColor = vec4(finalColor, alpha);  // Final color with transparency
+    FragColor = vec4(finalColor, 1.0);  // Final color with transparency
 }

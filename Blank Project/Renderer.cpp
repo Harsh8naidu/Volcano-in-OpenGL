@@ -21,9 +21,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// Load the meshes
 	quad = Mesh::GenerateQuad();
 	volcanoMesh = Mesh::LoadFromMeshFile("Volcano.msh");
-	bonyWallMesh = Mesh::LoadFromMeshFile("BonyWall.msh");
-	monsterMesh = Mesh::LoadFromMeshFile("Role_T.msh");
-	volcanicRockMesh = Mesh::LoadFromMeshFile("VolcanicRock.msh");
+	//bonyWallMesh = Mesh::LoadFromMeshFile("BonyWall.msh");
+	//monsterMesh = Mesh::LoadFromMeshFile("Role_T.msh");
+	//volcanicRockMesh = Mesh::LoadFromMeshFile("VolcanicRock.msh");
 
 	// Load the heightmaps
 	heightMap = new HeightMap(TEXTUREDIR "volcano_heightmap.png");
@@ -38,13 +38,13 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	//flashTexture = SOIL_load_OGL_texture(TEXTUREDIR "full_screen_effect.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
-	bonyWallTexture = SOIL_load_OGL_texture(TEXTUREDIR"bonywall_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
+	//bonyWallTexture = SOIL_load_OGL_texture(TEXTUREDIR"bonywall_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
 
 	volcanoTexture = SOIL_load_OGL_texture(TEXTUREDIR"volcano_molten_lava.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
 
-	monsterTexture = SOIL_load_OGL_texture(TEXTUREDIR"metallic_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
+	//monsterTexture = SOIL_load_OGL_texture(TEXTUREDIR"metallic_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
 
-	snowTexture = SOIL_load_OGL_texture(TEXTUREDIR "snow_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	//snowTexture = SOIL_load_OGL_texture(TEXTUREDIR "snow_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
 	frozenLavaTexture = SOIL_load_OGL_texture(TEXTUREDIR "frozen_lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
@@ -71,16 +71,22 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	reflectShader = new Shader("reflectVertex.glsl", "reflectFragment.glsl");
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
 	lightShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
-	flashShader = new Shader("flashVertex.glsl", "flashFragment.glsl");
 
-	if (!reflectShader->LoadSuccess() || !skyboxShader->LoadSuccess() || !lightShader->LoadSuccess() || !flashShader->LoadSuccess()) {
+	if (!reflectShader->LoadSuccess() || !skyboxShader->LoadSuccess() || !lightShader->LoadSuccess() ||
+		!modelShader->LoadSuccess()) {
+		return;
+	}
+
+	if (!objModelShader->LoadSuccess()) {
 		return;
 	}
 
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 
 	// Set up the camera and light
-	camera = new Camera(-10.0f, 190.0f, heightmapSize * Vector3(0.67f, 2.2f, -0.88f));
+	camera = new Camera(-10.0f, 190.0f, heightmapSize * Vector3(0.67f, 3.6f, 0.3f)); // -0.88f
+	camera->SetPitch(5.0f);
+	camera->SetYaw(270.0f);
 
 	// One light for the scene
 	sceneLight = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightmapSize.x);
@@ -92,32 +98,6 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	rootNode = new SceneNode();
 	//rootNode->AddChild(new Volcano(volcanoMesh, volcanoTexture));
 
-	//// Bony Walls (4 walls for each side of the map)
-	//// Horizontal walls
-	//for (int i = 0; i < 8; i++) {
-	//	rootNode->AddChild(new BonyWall(bonyWallMesh, Matrix4::Translation(Vector3(7700 - i * 1000, 500, 100)), bonyWallTexture));
-	//}
-
-	//// Horizontal walls
-	//for (int i = 0; i < 8; i++) {
-	//	rootNode->AddChild(new BonyWall(bonyWallMesh, Matrix4::Translation(Vector3(7700 - i * 1000, 500, 8200)), bonyWallTexture));
-	//}
-	//
-	//// Vertical walls
-	//for (int i = 0; i < 8; i++) {
-	//	Matrix4 transform = Matrix4::Translation(Vector3(200, 500, 1000 + i * 1000)) * Matrix4::Rotation(90.0f, Vector3(0, 1, 0));
-	//	rootNode->AddChild(new BonyWall(bonyWallMesh, transform, bonyWallTexture));
-	//}
-
-	//// Vertical walls
-	//for (int i = 0; i < 8; i++) {
-	//	Matrix4 transform = Matrix4::Translation(Vector3(8000, 500, 1000 + i * 1000)) * Matrix4::Rotation(90.0f, Vector3(0, 1, 0));
-	//	rootNode->AddChild(new BonyWall(bonyWallMesh, transform, bonyWallTexture));
-	//}
-
-	//// Monsters
-	//rootNode->AddChild(new Monster(monsterMesh, monsterTexture));
-	
 	straightMoveDirection = Vector3(0, 0, 1); // Moving along negative Z-axis
 
 	elapsedTime = 0.0f;
@@ -147,7 +127,7 @@ Renderer::~Renderer(void) {
 	delete lightShader;
 	delete modelShader;
 	delete flashShader;
-	//delete objModelShader;
+	delete objModelShader;
 
 	// light cleanup
 	delete sceneLight;
@@ -162,7 +142,6 @@ Renderer::~Renderer(void) {
 	glDeleteTextures(1, &lavaTex);
 	glDeleteTextures(1, &earthTex);
 	glDeleteTextures(1, &earthBump);
-	//glDeleteTextures(1, &flashTexture);
 
 	// objects cleanup
 	delete testObjModel;
@@ -175,11 +154,11 @@ void Renderer::UpdateScene(float dt) {
 	// Move the camera in the straightMoveDirection
 	Vector3 currentPosition = camera->GetPosition();
 	Vector3 newPosition = currentPosition + (straightMoveDirection * dt * 80.0f); // Adjust speed
-	camera->SetPosition(newPosition);
+	//camera->SetPosition(newPosition);
 
 	// Rotate the camera
 	rotationSpeed = 3.0f; // Adjust rotation speed
-	camera->SetYaw(camera->GetYaw() - rotationSpeed * dt); // Rotate left
+	//camera->SetYaw(camera->GetYaw() - rotationSpeed * dt); // Rotate left
 
 	// Second Scene (starts here)
 	elapsedTime += dt; // Increment elapsed time
@@ -229,58 +208,57 @@ void Renderer::UpdateScene(float dt) {
 void Renderer::RenderScene() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	
 	DrawSkybox();
-	DrawHeightmap();
+	//DrawHeightmap();
 	DrawLava();
 	DrawMug();
-	DrawNode(rootNode);
+	//DrawNode(rootNode);
 	//CreateFlashEffect(); // Not working
 }
 
 void Renderer::DrawMug() {
 	BindShader(objModelShader);
+	UpdateShaderMatrices();
 
-	// Set the position and scale of the mug
-	Vector3 mugPosition = Vector3(0.0f, -20.0f, 0.0f);  // Position near the lava (adjust as needed)
-	Vector3 mugScale = Vector3(10.0f, 10.0f, 10.0f);     // Scale the mug (adjust as needed)
+	Vector3 hSize = heightMap->GetHeightmapSize();
 
-	// Apply transformation (translation and scale)
-	modelMatrix = Matrix4::Translation(mugPosition) * Matrix4::Scale(mugScale);
+	float waterOffset = 20.0f; // Value to move the water up or down
+	modelMatrix = Matrix4::Translation(hSize * Vector3(0.7f, 3.5f, 0.3f)) *
+		Matrix4::Scale(Vector3(10.0f, 10.0f, 10.0f)) *
+		Matrix4::Rotation(90, Vector3(0, 1, 0));
 
-	// Bind the material properties to the shader
-	if (testObjModel->material) {
-		Material* mat = testObjModel->material;
-		std::cout << "Material: " << mat->name << std::endl;
+	// Iterate through all materials and bind them
+	const std::vector<Material>& materials = testObjModel->GetMaterials();
 
-		// Bind the other material properties (if available/necessary)
-		glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "shininess"), mat->shininess);
-		glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "ambient"), 1, (float*)&mat->ambient);
-		glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "specular"), 1, (float*)&mat->specular);
-		glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "emission"), 1, (float*)&mat->emission);
-		glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "ior"), mat->ior);
-		glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "dissolveFactor"), mat->dissolveFactor);
-		glUniform1i(glGetUniformLocation(objModelShader->GetProgram(), "illuminationModel"), mat->illuminationModel);
+	for (const Material& mat : materials) {
+		// Bind the material properties to the shader
+		glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "shininess"), mat.shininess);
+		glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "ambient"), 1, (float*)&mat.ambient);
+		glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "specular"), 1, (float*)&mat.specular);
+		glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "emission"), 1, (float*)&mat.emission);
+		glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "ior"), mat.ior);
+		glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "dissolveFactor"), mat.dissolveFactor);
+		glUniform1i(glGetUniformLocation(objModelShader->GetProgram(), "illuminationModel"), mat.illuminationModel);
 
-		std::cout << "Diffuse texture: " << mat->diffuseTexture << std::endl;
 		// Bind the diffuse texture
-		if (mat->diffuseTexture > 0) {
+		if (mat.diffuseTexture > 0) {
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, mat->diffuseTexture);
+			glBindTexture(GL_TEXTURE_2D, mat.diffuseTexture);
+			std::cout << "diffuseTexture: " << mat.diffuseTexture << std::endl;
 			glUniform1i(glGetUniformLocation(objModelShader->GetProgram(), "diffuseTexture"), 0);
 		}
+
+		glBindBuffer(GL_ARRAY_BUFFER, testObjModel->modelVBO); // Bind the VBO
+		glBindVertexArray(testObjModel->modelVAO); // Bind the VAO
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, testObjModel->modelEBO); // Bind the EBO
+
+		// Draw the model
+		glDrawElements(GL_TRIANGLES, testObjModel->indices, GL_UNSIGNED_INT, nullptr);
+		// Unbind the VAO
+		glBindVertexArray(0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	}
-
-	glBindBuffer(GL_ARRAY_BUFFER, testObjModel->modelVBO); // Bind the VBO
-
-	glBindVertexArray(testObjModel->modelVAO); // Bind the VAO
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, testObjModel->modelEBO); // Bind the EBO
-
-	// Draw the model
-	glDrawElements(GL_TRIANGLES, testObjModel->indices, GL_UNSIGNED_INT, 0);
-	// Unbind the VAO
-	glBindVertexArray(0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 //void Renderer::CreateFlashEffect() {
@@ -355,29 +333,29 @@ void Renderer::DrawHeightmap() {
 
 void Renderer::DrawLava() {
 	// Draw the lava
-	BindShader(reflectShader);
+	//BindShader(reflectShader);
 
-	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "diffuseTex"), 0);
-	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "cubeTex"), 2);
+	//glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "diffuseTex"), 0);
+	//glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "cubeTex"), 2);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, lavaTex);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, lavaTex);
 
-	Vector3 hSize = heightMap->GetHeightmapSize();
+	//Vector3 hSize = heightMap->GetHeightmapSize();
 
-	float waterOffset = -20.0f; // Value to move the water up or down
-	modelMatrix = Matrix4::Translation(hSize * Vector3(0.5f, 0.5f, 0.5f)) *
-		Matrix4::Translation(Vector3(0.0f, waterOffset, 0.0f)) * // Move water down
-		Matrix4::Scale(hSize * 0.5f) *
-		Matrix4::Rotation(90, Vector3(1, 0, 0));
+	//float waterOffset = -20.0f; // Value to move the water up or down
+	//modelMatrix = Matrix4::Translation(hSize * Vector3(0.5f, 0.5f, 0.5f)) *
+	//	Matrix4::Translation(Vector3(0.0f, waterOffset, 0.0f)) * // Move water down
+	//	Matrix4::Scale(Vector3(10.0f, 10.0f, 10.0f)) *
+	//	Matrix4::Rotation(180, Vector3(1, 0, 0));
 
-	textureMatrix = Matrix4::Translation(Vector3(lavaCycle, 0.0f, lavaCycle)) *
-		Matrix4::Scale(Vector3(10, 10, 10)) *
-		Matrix4::Rotation(lavaRotate, Vector3(0, 0, 1));
+	//textureMatrix = Matrix4::Translation(Vector3(lavaCycle, 0.0f, lavaCycle)) *
+	//	Matrix4::Scale(Vector3(1, 1, 1)) *
+	//	Matrix4::Rotation(lavaRotate, Vector3(0, 0, 1));
 
-	UpdateShaderMatrices();
+	//UpdateShaderMatrices();
 
-	quad->Draw();
+	//quad->Draw();
 }
 
 void Renderer::DrawNode(SceneNode* n) {

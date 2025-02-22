@@ -52,6 +52,7 @@ bool MaterialLoader::LoadMTL(const std::string& filePath) {
             lineStream >> currentMaterial.specular.x >> currentMaterial.specular.y >> currentMaterial.specular.z;
         }
         else if (type == "Kd") { // Diffuse color
+			std::cout << "Diffuse color: " << currentMaterial.diffuseTexture << std::endl;
             lineStream >> currentMaterial.diffuseTexture;
         }
         else if (type == "Ke") { // Emission color
@@ -69,18 +70,10 @@ bool MaterialLoader::LoadMTL(const std::string& filePath) {
     }
 
     if (!currentMaterial.name.empty()) {
+		std::cout << "Adding material: " << currentMaterial.name << std::endl;
         materials.push_back(currentMaterial);
     }
 
     file.close();
     return true;
-}
-
-Material* MaterialLoader::GetMaterialByName(const std::string& materialName) {
-    for (auto& material : materials) {
-        if (material.name == materialName) {
-            return &material;
-        }
-    }
-    return nullptr; // Return nullptr if no material matches the name
 }

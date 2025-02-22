@@ -9,10 +9,6 @@ uniform mat4 viewMatrix;    // View matrix
 uniform mat4 projMatrix;    // Projection matrix
 uniform vec4 nodeColour;    // Node color (can be used for vertex coloring if needed)
 
-in vec3 position;           // Vertex position
-in vec3 normal;             // Vertex normal
-in vec2 texCoord;           // Vertex texture coordinates
-
 out Vertex {
     vec2 texCoord;          // Texture coordinates to pass to the fragment shader
     vec4 colour;            // Color to pass to the fragment shader (if needed)
@@ -27,6 +23,7 @@ void main(void) {
     // Pass data to the fragment shader
     OUT.texCoord = texCoord;
     OUT.colour = nodeColour;  // If needed for vertex color, can be used in the fragment shader
+    //OUT.normal = normalize(mat3(transpose(inverse(modelMatrix))) * normal);  // Transform normal to world space
     OUT.normal = normalize(mat3(transpose(inverse(modelMatrix))) * normal);  // Transform normal to world space
     OUT.fragPos = vec3(modelMatrix * vec4(position, 1.0));  // Position in world space
 }

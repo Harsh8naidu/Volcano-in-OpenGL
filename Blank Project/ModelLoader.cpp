@@ -3,6 +3,8 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <map>
+#include <tuple>
 
 ModelLoader::ModelLoader(const std::string& filePath)
 {
@@ -20,6 +22,11 @@ bool ModelLoader::LoadOBJ(const std::string& filePath) {
 	std::vector<Vector2> texCoords;
 	std::vector<Vector3> normals;
     std::vector<unsigned int> positionIndices, texCoordIndices, normalIndices;
+
+    std::string currentMaterialName = "";
+    int currentStartIndex = 0;
+
+    std::map<std::tuple<int, int, int>, unsigned int> vertexMap;
 
     std::string line;
     while (std::getline(file, line)) {
@@ -42,30 +49,76 @@ bool ModelLoader::LoadOBJ(const std::string& filePath) {
             lineStream >> normal.x >> normal.y >> normal.z;
             normals.push_back(normal);
         }
+        else if (type == "usemtl") {
+            // Save previous material range before switching
+            if (!currentMaterialName.empty()) {
+                MaterialRange range;
+                range.materialName = currentMaterialName;
+                range.startIndex = currentStartIndex;
+                range.indexCount = (int)positionIndices.size() - currentStartIndex;
+                materialRanges.push_back(range);
+
+                std::cout << "Material Range Added: " << range.materialName
+                    << " | Start: " << range.startIndex
+                    << " | Count: " << range.indexCount << std::endl;
+            }
+
+            // Start tracking new material
+            lineStream >> currentMaterialName;
+            currentStartIndex = (int)positionIndices.size();
+
+            std::cout << "Switching to material: " << currentMaterialName << std::endl;
+        }
         else if (type == "f") { // Face indices
-            unsigned int posIdx[3], texIdx[3], normIdx[3];
-            for (int i = 0; i < 3; ++i) {
-                char slash;
-                lineStream >> posIdx[i] >> slash >> texIdx[i] >> slash >> normIdx[i];
-                posIdx[i]--; texIdx[i]--; normIdx[i]--; // OBJ format is 1-based, adjust to 0-based
-                positionIndices.push_back(posIdx[i]);
-                texCoordIndices.push_back(texIdx[i]);
-                normalIndices.push_back(normIdx[i]);
+            std::string vertexData;
+            std::vector<unsigned int> faceIndices;
+
+            while (lineStream >> vertexData) {
+                unsigned int posIdx, texIdx, normIdx;
+                sscanf(vertexData.c_str(), "%u/%u/%u", &posIdx, &texIdx, &normIdx);
+                posIdx--; texIdx--; normIdx--;
+
+                // Check if this vertex combination already exists
+                auto key = std::make_tuple(posIdx, texIdx, normIdx);
+                auto it = vertexMap.find(key);
+
+                if (it != vertexMap.end()) {
+                    faceIndices.push_back(it->second);
+                }
+                else {
+                    // Add new unique vertex
+                    unsigned int newIndex = (unsigned int)vertices.size();
+                    vertexMap[key] = newIndex;
+
+                    Vertex vertex = {};
+                    vertex.v_position = positions[posIdx];
+                    vertex.v_texCoord = texCoords[texIdx];
+                    vertex.v_normal   = normals[normIdx];
+                    vertices.push_back(vertex);
+
+                    faceIndices.push_back(newIndex);
+                }
+            }
+
+            // Triangulate face (can handle both triangles and quads)
+            for (size_t i = 1; i + 1 < faceIndices.size(); ++i) {
+                indices.push_back(faceIndices[0]);
+                indices.push_back(faceIndices[i]);
+                indices.push_back(faceIndices[i + 1]);
             }
         }
     }
 
-    file.close();
-
-    // Combine indices into vertices
-    for (size_t i = 0; i < positionIndices.size(); ++i) {
-        Vertex vertex = {};
-        vertex.v_position = positions[positionIndices[i]];
-        vertex.v_texCoord = texCoords[texCoordIndices[i]];
-        vertex.v_normal = normals[normalIndices[i]];
-        vertices.push_back(vertex);
-        indices.push_back(static_cast<unsigned int>(i)); // Directly map index
+    // Save the last material range
+    if (!currentMaterialName.empty()) {
+        MaterialRange range;
+        range.materialName = currentMaterialName;
+        range.startIndex = currentStartIndex;
+        range.indexCount = (int)indices.size() - currentStartIndex;
+        materialRanges.push_back(range);
     }
+
+    file.close();
 
     return true;
 }

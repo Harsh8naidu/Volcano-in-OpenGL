@@ -10,11 +10,13 @@ Material::Material()
     ambient(Vector3(0.0f, 0.0f, 0.0f)),
     specular(Vector3(0.0f, 0.0f, 0.0f)),
     emission(Vector3(0.0f, 0.0f, 0.0f)),
+    lightDirection(Vector3(0.5f, -1.0f, 0.5f)),
     ior(1.0f),
     dissolveFactor(1.0f),
     illuminationModel(0),
-    diffuseTexture(0.0f),
-    bumpTexture(0.0f)
+    diffuseTexture(0),
+	roughnessTexture(0),
+	metallicTexture(0)
     {}
 
 bool MaterialLoader::LoadMTL(const std::string& filePath) {
@@ -39,6 +41,7 @@ bool MaterialLoader::LoadMTL(const std::string& filePath) {
             if (!currentMaterial.name.empty()) {
                 // Save the previous material before starting a new one
                 materials.push_back(currentMaterial);
+                currentMaterial = Material(); // reset for next material
             }
             lineStream >> currentMaterial.name; // Read the material name
         }
@@ -51,10 +54,6 @@ bool MaterialLoader::LoadMTL(const std::string& filePath) {
         else if (type == "Ks") { // Specular color
             lineStream >> currentMaterial.specular.x >> currentMaterial.specular.y >> currentMaterial.specular.z;
         }
-        else if (type == "Kd") { // Diffuse color
-			std::cout << "Diffuse color: " << currentMaterial.diffuseTexture << std::endl;
-            lineStream >> currentMaterial.diffuseTexture;
-        }
         else if (type == "Ke") { // Emission color
             lineStream >> currentMaterial.emission.x >> currentMaterial.emission.y >> currentMaterial.emission.z;
         }
@@ -66,6 +65,27 @@ bool MaterialLoader::LoadMTL(const std::string& filePath) {
         }
         else if (type == "illum") { // Illumination model
             lineStream >> currentMaterial.illuminationModel;
+        }
+        else if (type == "map_Kd") { // Diffuse texture
+            std::string texturePath;
+            lineStream >> texturePath;
+            std::string fullPath = materialDir + texturePath;
+            currentMaterial.diffuseTexture = SOIL_load_OGL_texture(fullPath.c_str(), SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
+			std::cout << "Diffuse texture: " << currentMaterial.diffuseTexture << std::endl;
+        }
+        else if (type == "map_Ns") { // Roughness texture
+            std::string texturePath;
+            lineStream >> texturePath;
+            std::string fullPath = materialDir + texturePath;
+            currentMaterial.roughnessTexture = SOIL_load_OGL_texture(fullPath.c_str(), SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
+			std::cout << "Roughness texture: " << currentMaterial.roughnessTexture << std::endl;
+        }
+		else if (type == "map_refl") { // Metallic texture
+			std::string texturePath;
+			lineStream >> texturePath;
+            std::string fullPath = materialDir + texturePath;
+			currentMaterial.metallicTexture = SOIL_load_OGL_texture(fullPath.c_str(), SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
+			std::cout << "Metallic texture: " << currentMaterial.metallicTexture << std::endl;
         }
     }
 

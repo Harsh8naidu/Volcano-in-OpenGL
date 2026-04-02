@@ -19,7 +19,7 @@ public:
 
 	Material* material; // store the material properties
 
-    ObjModel(const std::string& objFilePath, const std::string& mtlFilePath) {
+        ObjModel(const std::string& objFilePath, const std::string& mtlFilePath) {
         // Load the model (geometry)
         modelLoader = new ModelLoader(objFilePath);
 
@@ -56,10 +56,12 @@ public:
 
         // Now, unbind the buffers (good practice to unbind after setup)
         glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 		// Unbind the VAO
 		glBindVertexArray(0);
+
+        // Unbind EBO
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
     ~ObjModel() {
@@ -69,10 +71,17 @@ public:
 		glDeleteBuffers(1, &modelEBO);       // Clean up the EBO
     }
 
-    // Getter function to access the materials from the Material Loader
 	const std::vector<Material>& GetMaterials() const {
 		return materialLoader->GetMaterials();
 	}
+
+    const std::vector<MaterialRange>& GetMaterialRanges() const {
+        return modelLoader->GetMaterialRanges();
+    }
+
+    const Material& GetMaterialByName(const std::string& name) const {
+        return materialLoader->GetMaterialByName(name);
+    }
 
     GLuint getVAO() const {
         return modelVAO;

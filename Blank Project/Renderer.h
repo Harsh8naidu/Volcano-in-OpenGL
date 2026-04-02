@@ -44,6 +44,8 @@ protected:
 	Mesh* quad = nullptr;
 
 	Light* sceneLight = nullptr;
+    Light* fillLight = nullptr;
+    Light* ambientLight = nullptr;
 	Camera* camera = nullptr;
 
 	GLuint cubeMap;

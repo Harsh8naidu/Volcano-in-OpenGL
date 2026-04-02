@@ -30,30 +30,30 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	noiseHeightMap = new HeightMap(TEXTUREDIR "noise.png");
 
 	// Load the textures
-	lavaTex = SOIL_load_OGL_texture(TEXTUREDIR "lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	lavaTex = SOIL_load_OGL_texture(TEXTUREDIR "lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 
-	earthTex = SOIL_load_OGL_texture(TEXTUREDIR "volcanic_rock.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	earthTex = SOIL_load_OGL_texture(TEXTUREDIR "volcanic_rock.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 
-	earthBump = SOIL_load_OGL_texture(TEXTUREDIR "Barren RedsDOT3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	earthBump = SOIL_load_OGL_texture(TEXTUREDIR "Barren RedsDOT3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 
-	//flashTexture = SOIL_load_OGL_texture(TEXTUREDIR "full_screen_effect.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	//flashTexture = SOIL_load_OGL_texture(TEXTUREDIR "full_screen_effect.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 
 	//bonyWallTexture = SOIL_load_OGL_texture(TEXTUREDIR"bonywall_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
 
-	volcanoTexture = SOIL_load_OGL_texture(TEXTUREDIR"volcano_molten_lava.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
+	volcanoTexture = SOIL_load_OGL_texture(TEXTUREDIR"volcano_molten_lava.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 
 	//monsterTexture = SOIL_load_OGL_texture(TEXTUREDIR"metallic_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
 
-	//snowTexture = SOIL_load_OGL_texture(TEXTUREDIR "snow_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	//snowTexture = SOIL_load_OGL_texture(TEXTUREDIR "snow_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 
-	frozenLavaTexture = SOIL_load_OGL_texture(TEXTUREDIR "frozen_lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	frozenLavaTexture = SOIL_load_OGL_texture(TEXTUREDIR "frozen_lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 
 	// Load the cubemap
 	cubeMap = SOIL_load_OGL_cubemap(
 		TEXTUREDIR "right.jpg", TEXTUREDIR "left.jpg",
 		TEXTUREDIR "top.jpg", TEXTUREDIR "bottom.jpg",
 		TEXTUREDIR "front.jpg", TEXTUREDIR "back.jpg",
-		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0
+		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS
 	);
 
 	if (!earthTex || !earthBump || !lavaTex || !cubeMap) {
@@ -72,12 +72,19 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
 	lightShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
 
-	if (!reflectShader->LoadSuccess() || !skyboxShader->LoadSuccess() || !lightShader->LoadSuccess() ||
-		!modelShader->LoadSuccess()) {
+	if (!reflectShader->LoadSuccess()) {
 		return;
-	}
-
-	if (!objModelShader->LoadSuccess()) {
+    }
+    else if (!skyboxShader->LoadSuccess()) {
+        return;
+    }
+    else if (!lightShader->LoadSuccess()) {
+        return;
+    }
+    else if (!modelShader->LoadSuccess()) {
+        return;
+    }
+    else if (!objModelShader->LoadSuccess()) {
 		return;
 	}
 
@@ -89,7 +96,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	camera->SetYaw(270.0f);
 
 	// One light for the scene
-	sceneLight = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightmapSize.x);
+	sceneLight = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), 50.0f);
 
 	// Set up the matrices
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
@@ -209,7 +216,7 @@ void Renderer::RenderScene() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	
-	DrawSkybox();
+	//DrawSkybox();
 	//DrawHeightmap();
 	DrawLava();
 	DrawMug();
@@ -219,46 +226,75 @@ void Renderer::RenderScene() {
 
 void Renderer::DrawMug() {
 	BindShader(objModelShader);
-	UpdateShaderMatrices();
+
+    glDisable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
 
 	Vector3 hSize = heightMap->GetHeightmapSize();
 
-	float waterOffset = 20.0f; // Value to move the water up or down
 	modelMatrix = Matrix4::Translation(hSize * Vector3(0.7f, 3.5f, 0.3f)) *
 		Matrix4::Scale(Vector3(10.0f, 10.0f, 10.0f)) *
 		Matrix4::Rotation(90, Vector3(0, 1, 0));
 
-	// Iterate through all materials and bind them
-	const std::vector<Material>& materials = testObjModel->GetMaterials();
+    UpdateShaderMatrices();
 
-	for (const Material& mat : materials) {
-		// Bind the material properties to the shader
-		glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "shininess"), mat.shininess);
-		glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "ambient"), 1, (float*)&mat.ambient);
-		glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "specular"), 1, (float*)&mat.specular);
-		glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "emission"), 1, (float*)&mat.emission);
-		glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "ior"), mat.ior);
-		glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "dissolveFactor"), mat.dissolveFactor);
-		glUniform1i(glGetUniformLocation(objModelShader->GetProgram(), "illuminationModel"), mat.illuminationModel);
+    Vector3 camPos = camera->GetPosition();
+    glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "cameraPos"), 1, (float*)&camPos);
 
-		// Bind the diffuse texture
-		if (mat.diffuseTexture > 0) {
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, mat.diffuseTexture);
-			std::cout << "diffuseTexture: " << mat.diffuseTexture << std::endl;
-			glUniform1i(glGetUniformLocation(objModelShader->GetProgram(), "diffuseTexture"), 0);
-		}
+    // Iterate through all the material ranges, then bind and draw them
+    const std::vector<MaterialRange>& materialRange = testObjModel->GetMaterialRanges();
 
-		glBindBuffer(GL_ARRAY_BUFFER, testObjModel->modelVBO); // Bind the VBO
-		glBindVertexArray(testObjModel->modelVAO); // Bind the VAO
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, testObjModel->modelEBO); // Bind the EBO
+    glBindVertexArray(testObjModel->modelVAO); // Bind the VAO
 
-		// Draw the model
-		glDrawElements(GL_TRIANGLES, testObjModel->indices, GL_UNSIGNED_INT, nullptr);
-		// Unbind the VAO
-		glBindVertexArray(0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	}
+    for (const MaterialRange& range : materialRange) {
+        const Material& mat = testObjModel->GetMaterialByName(range.materialName);
+
+        // Bind the material properties to the shader
+        glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "shininess"), mat.shininess);
+        glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "ambient"), 1, (float*)&mat.ambient);
+        glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "specular"), 1, (float*)&mat.specular);
+        glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "emission"), 1, (float*)&mat.emission);
+        glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "lightDir"), 1, (float*)&mat.lightDirection);
+        glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "ior"), mat.ior);
+        glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "dissolveFactor"), mat.dissolveFactor);
+        glUniform1i(glGetUniformLocation(objModelShader->GetProgram(), "illuminationModel"), mat.illuminationModel);
+
+        // Texture binding helper function
+        auto bindTexture = [&](GLuint texture, GLenum textureUnit, const char* uniformName) {
+            if (texture > 0) {
+                glActiveTexture(textureUnit);
+                glBindTexture(GL_TEXTURE_2D, texture);
+                GLint loc = glGetUniformLocation(objModelShader->GetProgram(), uniformName);
+                if (loc != -1) {
+                    glUniform1i(loc, textureUnit - GL_TEXTURE0);
+                }
+                else {
+                    std::cout << "Warning: Uniform " << uniformName << " not found in shader!" << std::endl;
+                }
+            }
+            else {
+                std::cout << "Warning: " << uniformName << " texture ID is 0!" << std::endl;
+            }
+        };
+
+        // Ensure unique texture units
+        bindTexture(mat.diffuseTexture, GL_TEXTURE0, "diffuseTexture");
+        bindTexture(mat.roughnessTexture, GL_TEXTURE1, "roughnessTexture");
+        bindTexture(mat.metallicTexture, GL_TEXTURE2, "metallicTexture");
+
+        // Debug OpenGL errors
+        GLenum err;
+        while ((err = glGetError()) != GL_NO_ERROR) {
+            std::cout << "OpenGL Error: " << err << std::endl;
+        }
+
+        // Draw the model
+        glDrawElements(GL_TRIANGLES, testObjModel->indices, GL_UNSIGNED_INT, (void*)0);
+    }
+
+    glEnable(GL_CULL_FACE);
+    glBindVertexArray(0);
 }
 
 //void Renderer::CreateFlashEffect() {
@@ -297,39 +333,39 @@ void Renderer::DrawSkybox() {
 	glDepthMask(GL_TRUE);
 }
 
-void Renderer::DrawHeightmap() {
-	// Draw the heightmap
-	BindShader(lightShader);
-	SetShaderLight(*sceneLight);
-	glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
-
-	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, earthTex);
-
-	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "bumpTex"), 1);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, earthBump);
-
-	modelMatrix.ToIdentity();
-	textureMatrix.ToIdentity();
-
-	UpdateShaderMatrices();
-	heightMap->Draw();
-
-	modelMatrix.ToIdentity();
-
-	// Scaling for the noiseHeightMap only
-	float noiseScaleX = 2.0f;  // scale factor for X axis
-	float noiseScaleY = 1.0f;  // scale factor for Y axis (adjust as needed)
-	float noiseScaleZ = 2.0f;
-
-	modelMatrix = Matrix4::Scale(Vector3(noiseScaleX, noiseScaleY, noiseScaleZ)) * modelMatrix;
-
-	UpdateShaderMatrices();
-	noiseHeightMap->Draw();
-	
-}
+//void Renderer::DrawHeightmap() {
+//	// Draw the heightmap
+//	BindShader(lightShader);
+//	SetShaderLight(*sceneLight);
+//	glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+//
+//	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), 0);
+//	glActiveTexture(GL_TEXTURE0);
+//	glBindTexture(GL_TEXTURE_2D, earthTex);
+//
+//	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "bumpTex"), 1);
+//	glActiveTexture(GL_TEXTURE1);
+//	glBindTexture(GL_TEXTURE_2D, earthBump);
+//
+//	modelMatrix.ToIdentity();
+//	textureMatrix.ToIdentity();
+//
+//	UpdateShaderMatrices();
+//	heightMap->Draw();
+//
+//	modelMatrix.ToIdentity();
+//
+//	// Scaling for the noiseHeightMap only
+//	float noiseScaleX = 2.0f;  // scale factor for X axis
+//	float noiseScaleY = 1.0f;  // scale factor for Y axis (adjust as needed)
+//	float noiseScaleZ = 2.0f;
+//
+//	modelMatrix = Matrix4::Scale(Vector3(noiseScaleX, noiseScaleY, noiseScaleZ)) * modelMatrix;
+//
+//	UpdateShaderMatrices();
+//	noiseHeightMap->Draw();
+//	
+//}
 
 void Renderer::DrawLava() {
 	// Draw the lava

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include "MaterialLoader.h"
 #include <string>
 #include <nclgl/Vector3.h>
 #include <nclgl/Vector2.h>
@@ -26,8 +27,11 @@ public:
     // Loads the OBJ file from the given file path
     bool LoadOBJ(const std::string& filePath);
 
+    std::vector<MaterialRange> materialRanges;
+
+    const std::vector<MaterialRange>& GetMaterialRanges() const { return materialRanges; }
+
 private:
     GLuint textureID;
     GLuint textureLocation;
-
 };

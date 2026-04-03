@@ -96,10 +96,10 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	camera->SetYaw(90.0f);
 
 	// Lights for the scene
-    sceneLights.push_back(new Light(Vector3(-15.0f, 10.0f, 0.0f), Vector4(1, 1, 1, 1), 100.0f)); // left
-    sceneLights.push_back(new Light(Vector3(15.0f, 10.0f, 0.0f), Vector4(1, 1, 1, 1), 100.0f)); // right
-    sceneLights.push_back(new Light(Vector3(0.0f, 20.0f, 0.0f), Vector4(1, 1, 1, 1), 100.0f)); // above
-    sceneLights.push_back(new Light(Vector3(0.0f, 10.0f, 15.0f), Vector4(0, 2, 0, 1), 100.0f)); // green front
+    sceneLights.push_back(new Light(Vector3(-25.0f, 20.0f, 0.0f), Vector4(4, 4, 4, 1), 300.0f)); // left
+    sceneLights.push_back(new Light(Vector3(25.0f, 20.0f, 0.0f), Vector4(2, 2, 2, 1), 300.0f)); // right
+    sceneLights.push_back(new Light(Vector3(0.0f, 20.0f, 0.0f), Vector4(4, 4, 4, 1), 300.0f)); // above
+    sceneLights.push_back(new Light(Vector3(0.0f, 20.0f, 25.0f), Vector4(1, 1, 1, 1), 300.0f)); // green front
 
 	// Set up the matrices
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);

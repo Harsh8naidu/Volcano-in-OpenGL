@@ -10,7 +10,6 @@ Material::Material()
     ambient(Vector3(0.0f, 0.0f, 0.0f)),
     specular(Vector3(0.0f, 0.0f, 0.0f)),
     emission(Vector3(0.0f, 0.0f, 0.0f)),
-    lightDirection(Vector3(0.5f, -1.0f, 0.5f)),
     ior(1.0f),
     dissolveFactor(1.0f),
     illuminationModel(0),

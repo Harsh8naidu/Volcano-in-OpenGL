@@ -12,7 +12,6 @@ struct Material {
     Vector3 ambient;  // Ka
     Vector3 specular; // Ks
     Vector3 emission; // Ke
-    Vector3 lightDirection;
     float ior;   // Ni
     float dissolveFactor; // d
     int illuminationModel; // illum

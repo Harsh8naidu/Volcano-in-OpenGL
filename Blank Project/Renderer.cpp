@@ -91,12 +91,15 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 
 	// Set up the camera and light
-	camera = new Camera(-10.0f, 190.0f, heightmapSize * Vector3(0.67f, 3.6f, 0.3f)); // -0.88f
+	camera = new Camera(-10.0f, 190.0f, heightmapSize * Vector3(0.01f, 0.07f, 0.0f)); // -0.88f
 	camera->SetPitch(5.0f);
-	camera->SetYaw(270.0f);
+	camera->SetYaw(90.0f);
 
-	// One light for the scene
-	sceneLight = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), 50.0f);
+	// Lights for the scene
+    sceneLights.push_back(new Light(Vector3(-15.0f, 10.0f, 0.0f), Vector4(1, 1, 1, 1), 100.0f)); // left
+    sceneLights.push_back(new Light(Vector3(15.0f, 10.0f, 0.0f), Vector4(1, 1, 1, 1), 100.0f)); // right
+    sceneLights.push_back(new Light(Vector3(0.0f, 20.0f, 0.0f), Vector4(1, 1, 1, 1), 100.0f)); // above
+    sceneLights.push_back(new Light(Vector3(0.0f, 10.0f, 15.0f), Vector4(0, 2, 0, 1), 100.0f)); // green front
 
 	// Set up the matrices
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
@@ -227,13 +230,9 @@ void Renderer::RenderScene() {
 void Renderer::DrawMug() {
 	BindShader(objModelShader);
 
-    glDisable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glFrontFace(GL_CCW);
-
 	Vector3 hSize = heightMap->GetHeightmapSize();
 
-	modelMatrix = Matrix4::Translation(hSize * Vector3(0.7f, 3.5f, 0.3f)) *
+	modelMatrix = Matrix4::Translation(Vector3(0.0f, 0.0f, 0.0f)) *
 		Matrix4::Scale(Vector3(10.0f, 10.0f, 10.0f)) *
 		Matrix4::Rotation(90, Vector3(0, 1, 0));
 
@@ -241,6 +240,19 @@ void Renderer::DrawMug() {
 
     Vector3 camPos = camera->GetPosition();
     glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "cameraPos"), 1, (float*)&camPos);
+
+    int lightCount = (int)sceneLights.size();
+    glUniform1i(glGetUniformLocation(objModelShader->GetProgram(), "lightCount"), lightCount);
+
+    for (int i = 0; i < lightCount; i++) {
+        std::string base = "lights[" + std::to_string(i) + "]";
+        Vector3 lPos = sceneLights[i]->GetPosition();
+        Vector4 lCol = sceneLights[i]->GetColour();
+        float lRadius = sceneLights[i]->GetRadius();
+        glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), (base + ".position").c_str()), 1, (float*)&lPos);
+        glUniform4fv(glGetUniformLocation(objModelShader->GetProgram(), (base + ".color").c_str()), 1, (float*)&lCol);
+        glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), (base + ".radius").c_str()), lRadius);
+    }
 
     // Iterate through all the material ranges, then bind and draw them
     const std::vector<MaterialRange>& materialRange = testObjModel->GetMaterialRanges();
@@ -255,7 +267,6 @@ void Renderer::DrawMug() {
         glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "ambient"), 1, (float*)&mat.ambient);
         glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "specular"), 1, (float*)&mat.specular);
         glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "emission"), 1, (float*)&mat.emission);
-        glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "lightDir"), 1, (float*)&mat.lightDirection);
         glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "ior"), mat.ior);
         glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "dissolveFactor"), mat.dissolveFactor);
         glUniform1i(glGetUniformLocation(objModelShader->GetProgram(), "illuminationModel"), mat.illuminationModel);
@@ -290,10 +301,9 @@ void Renderer::DrawMug() {
         }
 
         // Draw the model
-        glDrawElements(GL_TRIANGLES, testObjModel->indices, GL_UNSIGNED_INT, (void*)0);
+        glDrawElements(GL_TRIANGLES, range.indexCount, GL_UNSIGNED_INT, (void*)(range.startIndex * sizeof(unsigned int)));
     }
 
-    glEnable(GL_CULL_FACE);
     glBindVertexArray(0);
 }
 
@@ -333,65 +343,65 @@ void Renderer::DrawSkybox() {
 	glDepthMask(GL_TRUE);
 }
 
-//void Renderer::DrawHeightmap() {
-//	// Draw the heightmap
-//	BindShader(lightShader);
-//	SetShaderLight(*sceneLight);
-//	glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
-//
-//	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), 0);
-//	glActiveTexture(GL_TEXTURE0);
-//	glBindTexture(GL_TEXTURE_2D, earthTex);
-//
-//	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "bumpTex"), 1);
-//	glActiveTexture(GL_TEXTURE1);
-//	glBindTexture(GL_TEXTURE_2D, earthBump);
-//
-//	modelMatrix.ToIdentity();
-//	textureMatrix.ToIdentity();
-//
-//	UpdateShaderMatrices();
-//	heightMap->Draw();
-//
-//	modelMatrix.ToIdentity();
-//
-//	// Scaling for the noiseHeightMap only
-//	float noiseScaleX = 2.0f;  // scale factor for X axis
-//	float noiseScaleY = 1.0f;  // scale factor for Y axis (adjust as needed)
-//	float noiseScaleZ = 2.0f;
-//
-//	modelMatrix = Matrix4::Scale(Vector3(noiseScaleX, noiseScaleY, noiseScaleZ)) * modelMatrix;
-//
-//	UpdateShaderMatrices();
-//	noiseHeightMap->Draw();
-//	
-//}
+void Renderer::DrawHeightmap() {
+	// Draw the heightmap
+	BindShader(lightShader);
+	SetShaderLight(*sceneLight);
+	glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+
+	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, earthTex);
+
+	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "bumpTex"), 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, earthBump);
+
+	modelMatrix.ToIdentity();
+	textureMatrix.ToIdentity();
+
+	UpdateShaderMatrices();
+	heightMap->Draw();
+
+	modelMatrix.ToIdentity();
+
+	// Scaling for the noiseHeightMap only
+	float noiseScaleX = 2.0f;  // scale factor for X axis
+	float noiseScaleY = 1.0f;  // scale factor for Y axis (adjust as needed)
+	float noiseScaleZ = 2.0f;
+
+	modelMatrix = Matrix4::Scale(Vector3(noiseScaleX, noiseScaleY, noiseScaleZ)) * modelMatrix;
+
+	UpdateShaderMatrices();
+	noiseHeightMap->Draw();
+	
+}
 
 void Renderer::DrawLava() {
 	// Draw the lava
-	//BindShader(reflectShader);
+	BindShader(reflectShader);
 
-	//glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "diffuseTex"), 0);
-	//glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "cubeTex"), 2);
+	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "cubeTex"), 2);
 
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, lavaTex);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, lavaTex);
 
-	//Vector3 hSize = heightMap->GetHeightmapSize();
+	Vector3 hSize = heightMap->GetHeightmapSize();
 
-	//float waterOffset = -20.0f; // Value to move the water up or down
-	//modelMatrix = Matrix4::Translation(hSize * Vector3(0.5f, 0.5f, 0.5f)) *
-	//	Matrix4::Translation(Vector3(0.0f, waterOffset, 0.0f)) * // Move water down
-	//	Matrix4::Scale(Vector3(10.0f, 10.0f, 10.0f)) *
-	//	Matrix4::Rotation(180, Vector3(1, 0, 0));
+	float waterOffset = -20.0f; // Value to move the water up or down
+	modelMatrix = Matrix4::Translation(Vector3(0.0f, 0.0f, 0.0f)) *
+		Matrix4::Translation(Vector3(0.0f, waterOffset, 0.0f)) * // Move water down
+		Matrix4::Scale(Vector3(10.0f, 10.0f, 10.0f)) *
+		Matrix4::Rotation(180, Vector3(1, 0, 0));
 
-	//textureMatrix = Matrix4::Translation(Vector3(lavaCycle, 0.0f, lavaCycle)) *
-	//	Matrix4::Scale(Vector3(1, 1, 1)) *
-	//	Matrix4::Rotation(lavaRotate, Vector3(0, 0, 1));
+	textureMatrix = Matrix4::Translation(Vector3(lavaCycle, 0.0f, lavaCycle)) *
+		Matrix4::Scale(Vector3(1, 1, 1)) *
+		Matrix4::Rotation(lavaRotate, Vector3(0, 0, 1));
 
-	//UpdateShaderMatrices();
+	UpdateShaderMatrices();
 
-	//quad->Draw();
+	quad->Draw();
 }
 
 void Renderer::DrawNode(SceneNode* n) {

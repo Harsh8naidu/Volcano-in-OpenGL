@@ -21,7 +21,6 @@ bool ModelLoader::LoadOBJ(const std::string& filePath) {
     std::vector<Vector3> positions;
 	std::vector<Vector2> texCoords;
 	std::vector<Vector3> normals;
-    std::vector<unsigned int> positionIndices, texCoordIndices, normalIndices;
 
     std::string currentMaterialName = "";
     int currentStartIndex = 0;
@@ -55,7 +54,7 @@ bool ModelLoader::LoadOBJ(const std::string& filePath) {
                 MaterialRange range;
                 range.materialName = currentMaterialName;
                 range.startIndex = currentStartIndex;
-                range.indexCount = (int)positionIndices.size() - currentStartIndex;
+                range.indexCount = (int)indices.size() - currentStartIndex;
                 materialRanges.push_back(range);
 
                 std::cout << "Material Range Added: " << range.materialName
@@ -65,7 +64,7 @@ bool ModelLoader::LoadOBJ(const std::string& filePath) {
 
             // Start tracking new material
             lineStream >> currentMaterialName;
-            currentStartIndex = (int)positionIndices.size();
+            currentStartIndex = (int)indices.size();
 
             std::cout << "Switching to material: " << currentMaterialName << std::endl;
         }
@@ -92,7 +91,8 @@ bool ModelLoader::LoadOBJ(const std::string& filePath) {
 
                     Vertex vertex = {};
                     vertex.v_position = positions[posIdx];
-                    vertex.v_texCoord = texCoords[texIdx];
+                    vertex.v_texCoord.x = texCoords[texIdx].x;
+                    vertex.v_texCoord.y = 1.0f - texCoords[texIdx].y; // flip V
                     vertex.v_normal   = normals[normIdx];
                     vertices.push_back(vertex);
 

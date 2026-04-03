@@ -1,5 +1,13 @@
 #version 330 core
 
+#define MAX_LIGHTS 16
+
+struct Light {
+    vec3 position;
+    vec4 color;
+    float radius;
+};
+
 in Vertex {
     vec2 texCoord;
     vec4 colour;
@@ -20,41 +28,44 @@ uniform vec3 emission;            // Emission color
 uniform float ior;                // Index of refraction
 uniform float dissolveFactor;     // Dissolve factor for transparency
 uniform int illuminationModel;    // Illumination model selector
-uniform vec3 lightDir;            // Light direction (passed as a uniform)
 uniform vec3 cameraPos;           // Camera position (passed as a uniform)
+
+// Multi-light uniforms 
+uniform Light lights[MAX_LIGHTS];
+uniform int lightCount;
 
 void main() {
     // Normalize the input normal
     vec3 norm = normalize(IN.normal);
-    // Ambient component
-    vec3 ambientComponent = ambient * 0.01;
-
-    // Diffuse component
+    vec3 viewDir = normalize(cameraPos - IN.fragPos);  // Assume the camera is at the origin
     vec3 diffuseColor = texture(diffuseTexture, IN.texCoord).rgb;
-
-    // Roughness component
     float roughness = texture(roughnessTexture, IN.texCoord).r;
-
-    // Metallic component
     float metallic = texture(metallicTexture, IN.texCoord).r;
 
-    // Diffuse component based on the light direction and normal
-    vec3 lightDirNorm = normalize(lightDir);
-    float diff = max(dot(norm, lightDirNorm), 0.0);
-    diffuseColor *= diff * (1.0 - metallic);  // Diffuse contribution is reduced by metallic factor
+    float shininessValue = max(shininess * (1.0 - roughness), 0.1);
+    
+    vec3 result = vec3(0.0);
 
-    // Specular component
-    vec3 viewDir = normalize(cameraPos - IN.fragPos);  // Assume the camera is at the origin
-    vec3 reflectDir = reflect(-lightDirNorm, norm);
-    float shininessValue = max(shininess * (1.0 - roughness), 0.1); // Adjust shininess based on roughness
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininessValue);
-    vec3 specularComponent = spec * specular * (1.0 - metallic);
+    for (int i = 0; i < lightCount; i++) {
+        vec3 incident = normalize(lights[i].position - IN.fragPos);
+        vec3 halfDir = normalize(incident + viewDir);
+        float distance = length(lights[i].position - IN.fragPos);
+        float attenuation = 1.0 - clamp(distance / lights[i].radius, 0.0, 1.0);
 
-    // Combine the components based on the illumination model
-    vec3 finalColor = ambientComponent + diffuseColor + specularComponent + emission;
+        // Diffuse
+        float diff = max(dot(norm, incident), 0.0);
+        vec3 diffuseContrib = diffuseColor * lights[i].color.rgb * diff * (1.0 - metallic);
+        
+        // Specular
+        float spec = pow(max(dot(norm, halfDir), 0.0), shininessValue);
+        vec3 specularContrib = specular * lights[i].color.rgb * spec * (1.0 - metallic) * 0.33;
 
-    // Apply dissolve effect (transparency based on the dissolve factor)
-    float alpha = dissolveFactor;
+        result += (diffuseContrib + specularContrib) * attenuation;
+    }
 
-    FragColor = vec4(finalColor, alpha);  // Final color with transparency
+    // Ambient + emission (applied once, not per light)
+        result += ambient * diffuseColor * 0.05;
+        result += emission;
+
+        FragColor = vec4(result, dissolveFactor);
 }

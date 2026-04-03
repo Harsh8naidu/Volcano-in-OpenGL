@@ -1,10 +1,18 @@
 #version 330 core
 
+#define MAX_LIGHTS 16
+
+struct Light {
+    vec3 position;
+    vec4 color;
+    float radius;
+};
+
 uniform sampler2D diffuseTex;
+uniform sampler2D bumpTex;
 uniform vec3 cameraPos;
-uniform vec4 lightColour;
-uniform vec3 lightPos;
-uniform float lightRadious;
+uniform int lightCount;
+uniform Light lights[MAX_LIGHTS];
 
 in Vertex {
     vec4 colour;
@@ -16,23 +24,28 @@ in Vertex {
 out vec4 fragColour;
 
 void main(void){
-    vec3 incident = normalize(lightPos - IN.worldPos);
-    vec3 viewDir = normalize(cameraPos - IN.worldPos);
-    vec3 halfDir = normalize(incident + viewDir);
-
     vec4 diffuse = texture(diffuseTex, IN.texCoord);
+    vec3 viewDir = normalize(cameraPos - IN.worldPos);
+    vec3 result = vec3(0.0);
 
-    float lambert = max(dot(incident, IN.normal), 0.0f);
-    float distance = length(lightPos - IN.worldPos);
-    float attenuation = 1.0 - clamp(distance / lightRadious, 0.0, 1.0);
+    for (int i = 0; i < lightCount; i++) {
+        vec3 incident = normalize(lights[i].position - IN.worldPos);
+        vec3 halfDir = normalize(incident + viewDir);
+        float lambert = max(dot(incident, IN.normal), 0.0);
+        float distance = length(lights[i].position - IN.worldPos);
+        float attenuation = 1.0 - clamp(distance / lights[i].radius, 0.0, 1.0);
+        float specFactor = pow(clamp(dot(halfDir, IN.normal), 0.0, 1.0), 60.0); // Shininess factor hardcoded for simplicity
 
-    float specFactor = clamp(dot(halfDir, IN.normal), 0.0, 1.0);
-    specFactor = pow(specFactor, 60.0);
+        vec3 surface = diffuse.rgb * lights[i].color.rgb;
+        result += surface * lambert * attenuation;;
+        result += (lights[i].color.rgb * specFactor) * attenuation * 0.33; // Specular contribution scaled down for balance
+    }
 
-
-    vec3 surface = (diffuse.rgb * lightColour.rgb);
-    fragColour.rgb = surface * lambert * attenuation;
-    fragColour.rgb += (lightColour.rgb * specFactor) * attenuation * 0.33; // 0.33 is the specular intensity
-    fragColour.rgb += surface * 0.5; // 0.1 is the ambient intensity
-    fragColour.a = diffuse.a;
+    // Directional light
+    vec3 lightDir = normalize(vec3(-0.3, -1.0, -0.2));
+    float diff = max(dot(IN.normal, -lightDir), 0.0);
+    result += diffuse.rgb * vec3(1.0) * diff; // Directional light contribution
+   
+    result += diffuse.rgb * 0.05; // Ambient
+    fragColour = vec4(result, diffuse.a);
 }

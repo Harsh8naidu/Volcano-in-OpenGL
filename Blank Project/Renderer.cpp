@@ -96,9 +96,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	camera->SetYaw(90.0f);
 
 	// Lights for the scene
-    sceneLights.push_back(new Light(Vector3(-25.0f, 20.0f, 0.0f), Vector4(4, 4, 4, 1), 300.0f)); // left
+    sceneLights.push_back(new Light(Vector3(-25.0f, 20.0f, 0.0f), Vector4(1, 1, 1, 1), 300.0f)); // left
     sceneLights.push_back(new Light(Vector3(25.0f, 20.0f, 0.0f), Vector4(2, 2, 2, 1), 300.0f)); // right
-    sceneLights.push_back(new Light(Vector3(0.0f, 20.0f, 0.0f), Vector4(4, 4, 4, 1), 300.0f)); // above
+    sceneLights.push_back(new Light(Vector3(0.0f, 20.0f, 0.0f), Vector4(1, 1, 1, 1), 300.0f)); // above
     sceneLights.push_back(new Light(Vector3(0.0f, 20.0f, 25.0f), Vector4(1, 1, 1, 1), 300.0f)); // green front
 
 	// Set up the matrices
@@ -219,11 +219,11 @@ void Renderer::RenderScene() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	
-	//DrawSkybox();
-	//DrawHeightmap();
-	DrawLava();
+	DrawSkybox();
+	DrawHeightmap();
+	//DrawLava();
 	DrawMug();
-	//DrawNode(rootNode);
+	DrawNode(rootNode);
 	//CreateFlashEffect(); // Not working
 }
 
@@ -346,9 +346,21 @@ void Renderer::DrawSkybox() {
 void Renderer::DrawHeightmap() {
 	// Draw the heightmap
 	BindShader(lightShader);
-	SetShaderLight(*sceneLight);
-	glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 
+    // Upload all lights to shader
+    int lightCount = (int)sceneLights.size();
+    glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "lightCount"), lightCount);
+    for (int i = 0; i < lightCount; i++) {
+        std::string base = "lights[" + std::to_string(i) + "]";
+        Vector3 lPos = sceneLights[i]->GetPosition();
+        Vector4 lCol = sceneLights[i]->GetColour();
+        float lRadius = sceneLights[i]->GetRadius();
+        glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), (base + ".position").c_str()), 1, (float*)&lPos);
+        glUniform4fv(glGetUniformLocation(lightShader->GetProgram(), (base + ".color").c_str()), 1, (float*)&lCol);
+        glUniform1f(glGetUniformLocation(lightShader->GetProgram(), (base + ".radius").c_str()), lRadius);
+    }
+    
+    glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), 0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, earthTex);
@@ -357,7 +369,7 @@ void Renderer::DrawHeightmap() {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, earthBump);
 
-	modelMatrix.ToIdentity();
+    modelMatrix = Matrix4::Translation(Vector3(0, 90.0f, 0));
 	textureMatrix.ToIdentity();
 
 	UpdateShaderMatrices();

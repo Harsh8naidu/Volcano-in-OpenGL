@@ -64,7 +64,7 @@ void main() {
     }
 
     // Ambient + emission (applied once, not per light)
-        result += ambient * diffuseColor * 0.05;
+        result += ambient * diffuseColor * 0.5;
         result += emission;
 
         FragColor = vec4(result, dissolveFactor);

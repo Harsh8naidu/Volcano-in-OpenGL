@@ -5,6 +5,8 @@ HeightMap::HeightMap(const std::string& name) {
 	int iWidth, iHeight, iChans;
 	unsigned char* data = SOIL_load_image(name.c_str(), &iWidth, &iHeight, &iChans, 1);
 	if (!data) {
+        std::cout << "Loading heightmap: " << name << std::endl;
+        std::cout << "SOIL error: " << SOIL_last_result() << std::endl;
 		std::cout << "Heightmap cant't load file!\n" << std::endl;
 		return;
 	}

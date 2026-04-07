@@ -10,13 +10,15 @@
 #include "../nclgl/Math_Utility.h"
 #include "VolcanicRock.h"
 
+#include <filesystem>
+#include <iostream>
+
 // Please find the screenshots and link to the youtube video in a folder 
 // named "Youtube Video and Screenshots" in the root directory of the project
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
-	
 	// Load .obj files
-	testObjModel = new ObjModel(MODELDIR "Mug.obj", MATERIALDIR "Mug.mtl");
+	testObjModel = new ObjModel(MODELDIR "volcano_model.obj", MATERIALDIR "volcano_model.mtl");
 
 	// Load the meshes
 	quad = Mesh::GenerateQuad();
@@ -26,7 +28,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	//volcanicRockMesh = Mesh::LoadFromMeshFile("VolcanicRock.msh");
 
 	// Load the heightmaps
-	heightMap = new HeightMap(TEXTUREDIR "volcano_heightmap.png");
+	heightMap = new HeightMap(TEXTUREDIR "Heightmap_01_Mountain.jpg");
 	noiseHeightMap = new HeightMap(TEXTUREDIR "noise.png");
 
 	// Load the textures
@@ -58,7 +60,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	if (!earthTex || !earthBump || !lavaTex || !cubeMap) {
 		return;
-	}
+    }
 
 	// Set the texture to repeat
 	SetTextureRepeating(earthTex, true);
@@ -72,37 +74,24 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
 	lightShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
 
-	if (!reflectShader->LoadSuccess()) {
+	if (!reflectShader->LoadSuccess() || !skyboxShader->LoadSuccess() || !lightShader->LoadSuccess() || !modelShader->LoadSuccess() || !objModelShader->LoadSuccess()) {
 		return;
     }
-    else if (!skyboxShader->LoadSuccess()) {
-        return;
-    }
-    else if (!lightShader->LoadSuccess()) {
-        return;
-    }
-    else if (!modelShader->LoadSuccess()) {
-        return;
-    }
-    else if (!objModelShader->LoadSuccess()) {
-		return;
-	}
 
-	Vector3 heightmapSize = heightMap->GetHeightmapSize();
+	Vector3 hMapSize = heightMap->GetHeightmapSize();
 
 	// Set up the camera and light
-	camera = new Camera(-10.0f, 190.0f, heightmapSize * Vector3(0.01f, 0.07f, 0.0f)); // -0.88f
+	camera = new Camera(-10.0f, 190.0f, hMapSize * Vector3(0.01f, 0.07f, 0.0f)); // -0.88f
 	camera->SetPitch(5.0f);
 	camera->SetYaw(90.0f);
 
 	// Lights for the scene
-    sceneLights.push_back(new Light(Vector3(-25.0f, 20.0f, 0.0f), Vector4(1, 1, 1, 1), 300.0f)); // left
-    sceneLights.push_back(new Light(Vector3(25.0f, 20.0f, 0.0f), Vector4(2, 2, 2, 1), 300.0f)); // right
-    sceneLights.push_back(new Light(Vector3(0.0f, 20.0f, 0.0f), Vector4(1, 1, 1, 1), 300.0f)); // above
-    sceneLights.push_back(new Light(Vector3(0.0f, 20.0f, 25.0f), Vector4(1, 1, 1, 1), 300.0f)); // green front
+    sceneLights.push_back(new Light(Vector3(1500.0f, 110.0f, 2000.0f), Vector4(0.6f, 0, 0, 1), 5000.0f)); // left
+    sceneLights.push_back(new Light(Vector3(1500.0f, 110.0f, 2000.0f), Vector4(0.7f, 0, 0, 1), 5000.0f)); // right
+    
 
 	// Set up the matrices
-	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
+	projMatrix = Matrix4::Perspective(1.0f, 50000.0f, (float)width / (float)height, 45.0f);
 
 	// Set up the root node and add the models
 	rootNode = new SceneNode();
@@ -158,61 +147,10 @@ Renderer::~Renderer(void) {
 }
 
 void Renderer::UpdateScene(float dt) {
-	// Changing camera automatically
-	cameraTime += dt;
-
-	// Move the camera in the straightMoveDirection
-	Vector3 currentPosition = camera->GetPosition();
-	Vector3 newPosition = currentPosition + (straightMoveDirection * dt * 80.0f); // Adjust speed
-	//camera->SetPosition(newPosition);
-
-	// Rotate the camera
-	rotationSpeed = 3.0f; // Adjust rotation speed
-	//camera->SetYaw(camera->GetYaw() - rotationSpeed * dt); // Rotate left
-
-	// Second Scene (starts here)
-	elapsedTime += dt; // Increment elapsed time
-
-	if (!sceneChanged && elapsedTime >= 130.0f) {
-		isFlashing = true; // Start the full screen effect
-		flashTime = 2.0f;
-
-		// Change the texture of the heightmap
-		if (snowTexture) {
-			glDeleteTextures(1, &earthTex); // Delete old texture
-			earthTex = snowTexture;         // Assign new texture
-			SetTextureRepeating(earthTex, true);
-		}
-
-		if (frozenLavaTexture) {
-			glDeleteTextures(1, &lavaTex); // Delete old texture
-			lavaTex = frozenLavaTexture;         // Assign new texture
-			SetTextureRepeating(lavaTex, true);
-			isLavaFlowing = false; // Stop the lava flow
-		}
-
-		// Add new objects for the second scene
-		rootNode->AddChild(new VolcanicRock(volcanicRockMesh));
-		sceneChanged = true; // Mark scene as changed
-	}
-
-	if (isFlashing) {
-		flashTime -= dt; // Decrement flash time
-		if (flashTime <= 0.0f) {
-			isFlashing = false; // Stop the full screen effect
-		}
-	}
-
 	//Update the camera
 	camera->UpdateCamera(dt);
 	viewMatrix = camera->BuildViewMatrix();
-	if (isLavaFlowing) {
-		lavaRotate += dt * 2.0f; // Rotate the water texture
-		lavaCycle += dt * 0.25f; // Cycle the water texture
-	}
-
-	rootNode->Update(dt);
-
+	//rootNode->Update(dt);
 }
 
 void Renderer::RenderScene() {
@@ -232,9 +170,10 @@ void Renderer::DrawMug() {
 
 	Vector3 hSize = heightMap->GetHeightmapSize();
 
-	modelMatrix = Matrix4::Translation(Vector3(0.0f, 0.0f, 0.0f)) *
-		Matrix4::Scale(Vector3(10.0f, 10.0f, 10.0f)) *
-		Matrix4::Rotation(90, Vector3(0, 1, 0));
+	modelMatrix = Matrix4::Translation(Vector3(1500.0f, 90.0f, 2000.0f)) *
+		Matrix4::Scale(Vector3(1.0f, 1.0f, 1.0f)) *
+		Matrix4::Rotation(90, Vector3(0, 1, 0)) * 
+        Matrix4::Rotation(3, Vector3(1, 0, 0));
 
     UpdateShaderMatrices();
 
@@ -285,7 +224,7 @@ void Renderer::DrawMug() {
                 }
             }
             else {
-                std::cout << "Warning: " << uniformName << " texture ID is 0!" << std::endl;
+                //std::cout << "Warning: " << uniformName << " texture ID is 0!" << std::endl;
             }
         };
 
@@ -369,20 +308,28 @@ void Renderer::DrawHeightmap() {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, earthBump);
 
-    modelMatrix = Matrix4::Translation(Vector3(0, 90.0f, 0));
-	textureMatrix.ToIdentity();
+    float scaleHMapX = 5.0f; 
+    float scaleHMapY = 1.0f; 
+    float scaleHMapZ = 5.0f;
 
+    Vector3 hMapSize = heightMap->GetHeightmapSize();
+    Vector3 nMapSize = noiseHeightMap->GetHeightmapSize();
+
+    // Scale noiseHeightMap to match heightMap's world size
+    float noiseScaleX = scaleHMapX * (hMapSize.x / nMapSize.x);
+    float noiseScaleZ = scaleHMapZ * (hMapSize.z / nMapSize.z);
+
+    modelMatrix = Matrix4::Translation(Vector3(0, 70.0f, 0)) *
+        Matrix4::Scale(Vector3(scaleHMapX, scaleHMapY, scaleHMapZ));
+	
 	UpdateShaderMatrices();
 	heightMap->Draw();
 
-	modelMatrix.ToIdentity();
+	modelMatrix = Matrix4::Translation(Vector3(0, 10.0f, 0)) *
+        Matrix4::Scale(Vector3(noiseScaleX, scaleHMapY, noiseScaleZ));
 
-	// Scaling for the noiseHeightMap only
-	float noiseScaleX = 2.0f;  // scale factor for X axis
-	float noiseScaleY = 1.0f;  // scale factor for Y axis (adjust as needed)
-	float noiseScaleZ = 2.0f;
-
-	modelMatrix = Matrix4::Scale(Vector3(noiseScaleX, noiseScaleY, noiseScaleZ)) * modelMatrix;
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, volcanoTexture);
 
 	UpdateShaderMatrices();
 	noiseHeightMap->Draw();

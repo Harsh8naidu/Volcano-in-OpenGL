@@ -1,7 +1,12 @@
 #include "../nclgl/window.h"
 #include "Renderer.h"
 
+#include <filesystem>
+#include <iostream>
+
 int main() {
+    std::filesystem::current_path(PROJECT_ROOT);
+    
 	Window w("Volcano OpenGL Project!", 1280, 720, false);
 	if (!w.HasInitialised()) {
 		return -1;

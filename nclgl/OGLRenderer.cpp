@@ -216,6 +216,10 @@ void OGLRenderer::UpdateShaderMatrices()	{
 		glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "projMatrix")    ,	1,false, projMatrix.values);
 		glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "textureMatrix") , 1,false, textureMatrix.values);
 		glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "shadowMatrix")  , 1,false, shadowMatrix.values);
+        
+        // Normal matrix needs to be inversed and transposed
+        Matrix3 normalMatrix = Matrix3(modelMatrix.Inverse()).Transposed();
+        glUniformMatrix3fv(glGetUniformLocation(currentShader->GetProgram(), "normalMatrix"), 1, false, normalMatrix.values);
 	}
 }
 

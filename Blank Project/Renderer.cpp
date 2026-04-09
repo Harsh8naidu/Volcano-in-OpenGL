@@ -32,22 +32,15 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	noiseHeightMap = new HeightMap(TEXTUREDIR "noise.png");
 
 	// Load the textures
+    heightMapTex = SOIL_load_OGL_texture(TEXTUREDIR "Heightmap_01_Mountain.jpg", SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 	lavaTex = SOIL_load_OGL_texture(TEXTUREDIR "lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-
 	earthTex = SOIL_load_OGL_texture(TEXTUREDIR "volcanic_rock.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-
 	earthBump = SOIL_load_OGL_texture(TEXTUREDIR "Barren RedsDOT3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-
 	//flashTexture = SOIL_load_OGL_texture(TEXTUREDIR "full_screen_effect.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-
 	//bonyWallTexture = SOIL_load_OGL_texture(TEXTUREDIR"bonywall_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
-
 	volcanoTexture = SOIL_load_OGL_texture(TEXTUREDIR"volcano_molten_lava.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-
 	//monsterTexture = SOIL_load_OGL_texture(TEXTUREDIR"metallic_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
-
 	//snowTexture = SOIL_load_OGL_texture(TEXTUREDIR "snow_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-
 	frozenLavaTexture = SOIL_load_OGL_texture(TEXTUREDIR "frozen_lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 
 	// Load the cubemap
@@ -73,8 +66,14 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	reflectShader = new Shader("reflectVertex.glsl", "reflectFragment.glsl");
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
 	lightShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
+    terrainShader = new Shader("terrainVertexShader.glsl", "terrainFragmentShader.glsl");
 
-	if (!reflectShader->LoadSuccess() || !skyboxShader->LoadSuccess() || !lightShader->LoadSuccess() || !modelShader->LoadSuccess() || !objModelShader->LoadSuccess()) {
+	if (!reflectShader->LoadSuccess() || 
+        !skyboxShader->LoadSuccess() || 
+        !lightShader->LoadSuccess() || 
+        !modelShader->LoadSuccess() || 
+        !objModelShader->LoadSuccess() ||
+        !terrainShader->LoadSuccess()) {
 		return;
     }
 
@@ -86,8 +85,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	camera->SetYaw(90.0f);
 
 	// Lights for the scene
-    sceneLights.push_back(new Light(Vector3(1500.0f, 110.0f, 2000.0f), Vector4(0.6f, 0, 0, 1), 5000.0f)); // left
-    sceneLights.push_back(new Light(Vector3(1500.0f, 110.0f, 2000.0f), Vector4(0.7f, 0, 0, 1), 5000.0f)); // right
+    sceneLights.push_back(new Light(Vector3(1500.0f, 1000.0f, 2000.0f), Vector4(1.0f, 1.0f, 1.0f, 1), 5000.0f)); // left
+    sceneLights.push_back(new Light(Vector3(1500.0f, 1000.0f, 2000.0f), Vector4(1.0f, 1.0f, 1.0f, 1), 5000.0f)); // right
     
 
 	// Set up the matrices
@@ -284,29 +283,31 @@ void Renderer::DrawSkybox() {
 
 void Renderer::DrawHeightmap() {
 	// Draw the heightmap
-	BindShader(lightShader);
+	BindShader(terrainShader);
 
     // Upload all lights to shader
     int lightCount = (int)sceneLights.size();
-    glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "lightCount"), lightCount);
+    glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "lightCount"), lightCount);
     for (int i = 0; i < lightCount; i++) {
         std::string base = "lights[" + std::to_string(i) + "]";
         Vector3 lPos = sceneLights[i]->GetPosition();
         Vector4 lCol = sceneLights[i]->GetColour();
         float lRadius = sceneLights[i]->GetRadius();
-        glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), (base + ".position").c_str()), 1, (float*)&lPos);
-        glUniform4fv(glGetUniformLocation(lightShader->GetProgram(), (base + ".color").c_str()), 1, (float*)&lCol);
-        glUniform1f(glGetUniformLocation(lightShader->GetProgram(), (base + ".radius").c_str()), lRadius);
+        glUniform3fv(glGetUniformLocation(terrainShader->GetProgram(), (base + ".position").c_str()), 1, (float*)&lPos);
+        glUniform4fv(glGetUniformLocation(terrainShader->GetProgram(), (base + ".color").c_str()), 1, (float*)&lCol);
+        glUniform1f(glGetUniformLocation(terrainShader->GetProgram(), (base + ".radius").c_str()), lRadius);
     }
     
-    glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
-	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), 0);
+    glUniform3fv(glGetUniformLocation(terrainShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+	glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "diffuseTex"), 0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, earthTex);
 
-	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "bumpTex"), 1);
+	glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "heightMap"), 1);
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, earthBump);
+	glBindTexture(GL_TEXTURE_2D, heightMapTex);
+
+    glUniform1f(glGetUniformLocation(terrainShader->GetProgram(), "heightScale"), 50.0f);
 
     float scaleHMapX = 5.0f; 
     float scaleHMapY = 1.0f; 
@@ -321,18 +322,20 @@ void Renderer::DrawHeightmap() {
 
     modelMatrix = Matrix4::Translation(Vector3(0, 70.0f, 0)) *
         Matrix4::Scale(Vector3(scaleHMapX, scaleHMapY, scaleHMapZ));
-	
 	UpdateShaderMatrices();
 	heightMap->Draw();
 
 	modelMatrix = Matrix4::Translation(Vector3(0, 10.0f, 0)) *
         Matrix4::Scale(Vector3(noiseScaleX, scaleHMapY, noiseScaleZ));
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, volcanoTexture);
+    glUniform1f(glGetUniformLocation(terrainShader->GetProgram(), "heightScale"), 2000.0f);
 
 	UpdateShaderMatrices();
-	noiseHeightMap->Draw();
+    // Second terrain
+    glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "diffuseTex"), 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, volcanoTexture);
+    noiseHeightMap->Draw();
 	
 }
 

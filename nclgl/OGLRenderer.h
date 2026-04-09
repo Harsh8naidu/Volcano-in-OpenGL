@@ -31,6 +31,7 @@ _-_-_-_-_-_-_-""  ""
 #include "Vector3.h"
 #include "Vector2.h"
 #include "Quaternion.h"
+#include "Matrix3.h"
 #include "Matrix4.h"
 #include "Window.h"
 #include "Shader.h"
@@ -83,7 +84,9 @@ protected:
 	Matrix4 modelMatrix;	//Model matrix. NOT MODELVIEW
 	Matrix4 viewMatrix;		//View matrix
 	Matrix4 textureMatrix;	//Texture matrix
-	Matrix4 shadowMatrix;
+	Matrix4 shadowMatrix;   // Shadow matrix
+    
+    Matrix3 normalMatrix; // Normal matrix
 
 	int		width;			//Render area width (not quite the same as window width)
 	int		height;			//Render area height (not quite the same as window height)

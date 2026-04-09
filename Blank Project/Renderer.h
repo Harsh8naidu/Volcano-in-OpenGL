@@ -37,6 +37,7 @@ protected:
 	Shader* modelShader = nullptr;
 	Shader* flashShader = nullptr;
 	Shader* objModelShader = nullptr;
+    Shader* terrainShader = nullptr;
 
 	HeightMap* heightMap = nullptr;
 	HeightMap* noiseHeightMap = nullptr;
@@ -54,6 +55,7 @@ protected:
 
 	GLuint cubeMap;
 	GLuint lavaTex;
+    GLuint heightMapTex;
 	GLuint earthTex;
 	GLuint earthBump;
 	GLuint modelTexture;

@@ -18,18 +18,13 @@ public:
 
 	void RenderScene() override;
 
-	void DrawMug();
-	
 	void UpdateScene(float dt) override;
 
 protected:
 	void DrawHeightmap();
-	void DrawLava();
 	void DrawSkybox();
 	void DrawVolcano();
 	void DrawNode(SceneNode* n);
-
-	void CreateFlashEffect();
 
 	Shader* lightShader = nullptr;
 	Shader* reflectShader = nullptr;
@@ -59,11 +54,7 @@ protected:
 	GLuint earthTex;
 	GLuint earthBump;
 	GLuint modelTexture;
-	GLuint bonyWallTexture;
 	GLuint volcanoTexture;
-	GLuint monsterTexture;
-	GLuint snowTexture;
-	GLuint frozenLavaTexture;
 
 	float lavaRotate;
 	float lavaCycle;

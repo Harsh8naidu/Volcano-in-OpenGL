@@ -22,10 +22,6 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// Load the meshes
 	quad = Mesh::GenerateQuad();
-	volcanoMesh = Mesh::LoadFromMeshFile("Volcano.msh");
-	//bonyWallMesh = Mesh::LoadFromMeshFile("BonyWall.msh");
-	//monsterMesh = Mesh::LoadFromMeshFile("Role_T.msh");
-	//volcanicRockMesh = Mesh::LoadFromMeshFile("VolcanicRock.msh");
 
 	// Load the heightmaps
 	heightMap = new HeightMap(TEXTUREDIR "Heightmap_01_Mountain.jpg");
@@ -35,13 +31,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
     heightMapTex = SOIL_load_OGL_texture(TEXTUREDIR "Heightmap_01_Mountain.jpg", SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 	lavaTex = SOIL_load_OGL_texture(TEXTUREDIR "lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 	earthTex = SOIL_load_OGL_texture(TEXTUREDIR "volcanic_rock.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-	earthBump = SOIL_load_OGL_texture(TEXTUREDIR "Barren RedsDOT3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-	//flashTexture = SOIL_load_OGL_texture(TEXTUREDIR "full_screen_effect.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-	//bonyWallTexture = SOIL_load_OGL_texture(TEXTUREDIR"bonywall_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
 	volcanoTexture = SOIL_load_OGL_texture(TEXTUREDIR"volcano_molten_lava.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-	//monsterTexture = SOIL_load_OGL_texture(TEXTUREDIR"metallic_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
-	//snowTexture = SOIL_load_OGL_texture(TEXTUREDIR "snow_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-	frozenLavaTexture = SOIL_load_OGL_texture(TEXTUREDIR "frozen_lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 
 	// Load the cubemap
 	cubeMap = SOIL_load_OGL_cubemap(
@@ -57,7 +47,6 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// Set the texture to repeat
 	SetTextureRepeating(earthTex, true);
-	SetTextureRepeating(earthBump, true);
 	SetTextureRepeating(lavaTex, true);
 
 	// Load the shaders
@@ -158,27 +147,33 @@ void Renderer::RenderScene() {
 	
 	DrawSkybox();
 	DrawHeightmap();
-	//DrawLava();
-	DrawMug();
+	DrawVolcano();
 	DrawNode(rootNode);
-	//CreateFlashEffect(); // Not working
 }
 
-void Renderer::DrawMug() {
+void Renderer::DrawVolcano() {
 	BindShader(objModelShader);
 
-	Vector3 hSize = heightMap->GetHeightmapSize();
+    // Assign sampler units explicitly
+    glUniform1i(glGetUniformLocation(objModelShader->GetProgram(),
+        "diffuseTexture"), 0);
+    glUniform1i(glGetUniformLocation(objModelShader->GetProgram(),
+        "roughnessTexture"), 1);
+    glUniform1i(glGetUniformLocation(objModelShader->GetProgram(),
+        "metallicTexture"), 2);
 
-	modelMatrix = Matrix4::Translation(Vector3(1500.0f, 90.0f, 2000.0f)) *
+	modelMatrix = Matrix4::Translation(Vector3(7500.0f, 90.0f, 2000.0f)) *
 		Matrix4::Scale(Vector3(1.0f, 1.0f, 1.0f)) *
 		Matrix4::Rotation(90, Vector3(0, 1, 0)) * 
         Matrix4::Rotation(3, Vector3(1, 0, 0));
 
     UpdateShaderMatrices();
 
+    // Camera position
     Vector3 camPos = camera->GetPosition();
     glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "cameraPos"), 1, (float*)&camPos);
 
+    // Upload lights
     int lightCount = (int)sceneLights.size();
     glUniform1i(glGetUniformLocation(objModelShader->GetProgram(), "lightCount"), lightCount);
 
@@ -218,24 +213,17 @@ void Renderer::DrawMug() {
                 if (loc != -1) {
                     glUniform1i(loc, textureUnit - GL_TEXTURE0);
                 }
-                else {
-                    std::cout << "Warning: Uniform " << uniformName << " not found in shader!" << std::endl;
-                }
-            }
-            else {
-                //std::cout << "Warning: " << uniformName << " texture ID is 0!" << std::endl;
             }
         };
 
-        // Ensure unique texture units
+        // Bind textures
         bindTexture(mat.diffuseTexture, GL_TEXTURE0, "diffuseTexture");
         bindTexture(mat.roughnessTexture, GL_TEXTURE1, "roughnessTexture");
         bindTexture(mat.metallicTexture, GL_TEXTURE2, "metallicTexture");
 
-        // Debug OpenGL errors
-        GLenum err;
-        while ((err = glGetError()) != GL_NO_ERROR) {
-            std::cout << "OpenGL Error: " << err << std::endl;
+        if (mat.diffuseTexture == 0) {
+            std::cout << "Material " << range.materialName
+                << " has no diffuse texture. Using fallback.\n";
         }
 
         // Draw the model
@@ -243,28 +231,15 @@ void Renderer::DrawMug() {
     }
 
     glBindVertexArray(0);
-}
 
-//void Renderer::CreateFlashEffect() {
-//	// Render the full screen effect
-//	if (isFlashing) {
-//		BindShader(flashShader); // Use the custom flash shader
-//
-//		// Update projection and model-view matrices for the fullscreen quad
-//		projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
-//		modelMatrix.ToIdentity();
-//		viewMatrix.ToIdentity();
-//		UpdateShaderMatrices();
-//
-//		// Bind the flash texture
-//		glActiveTexture(GL_TEXTURE0);
-//		glBindTexture(GL_TEXTURE_2D, flashTexture);
-//		glUniform1i(glGetUniformLocation(flashShader->GetProgram(), "flashTex"), 0);
-//
-//		// Draw the full-screen quad
-//		quad->Draw();
-//	}
-//}
+    // Reset texture state
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
 
 void Renderer::DrawSkybox() {
 	// Draw the skybox
@@ -285,9 +260,13 @@ void Renderer::DrawHeightmap() {
 	// Draw the heightmap
 	BindShader(terrainShader);
 
+    // Camera position
+    glUniform3fv(glGetUniformLocation(terrainShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+
     // Upload all lights to shader
     int lightCount = (int)sceneLights.size();
     glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "lightCount"), lightCount);
+    
     for (int i = 0; i < lightCount; i++) {
         std::string base = "lights[" + std::to_string(i) + "]";
         Vector3 lPos = sceneLights[i]->GetPosition();
@@ -297,17 +276,6 @@ void Renderer::DrawHeightmap() {
         glUniform4fv(glGetUniformLocation(terrainShader->GetProgram(), (base + ".color").c_str()), 1, (float*)&lCol);
         glUniform1f(glGetUniformLocation(terrainShader->GetProgram(), (base + ".radius").c_str()), lRadius);
     }
-    
-    glUniform3fv(glGetUniformLocation(terrainShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
-	glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "diffuseTex"), 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, earthTex);
-
-	glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "heightMap"), 1);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, heightMapTex);
-
-    glUniform1f(glGetUniformLocation(terrainShader->GetProgram(), "heightScale"), 50.0f);
 
     float scaleHMapX = 5.0f; 
     float scaleHMapY = 1.0f; 
@@ -320,50 +288,48 @@ void Renderer::DrawHeightmap() {
     float noiseScaleX = scaleHMapX * (hMapSize.x / nMapSize.x);
     float noiseScaleZ = scaleHMapZ * (hMapSize.z / nMapSize.z);
 
-    modelMatrix = Matrix4::Translation(Vector3(0, 70.0f, 0)) *
+    // ---------- First Terrain ----------
+    glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "diffuseTex"), 0);
+    glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "heightMap"), 1);
+    glUniform1f(glGetUniformLocation(terrainShader->GetProgram(), "heightScale"), 50.0f);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, earthTex);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, heightMapTex);
+
+    modelMatrix = Matrix4::Translation(Vector3(0, 0.0f, 0)) *
         Matrix4::Scale(Vector3(scaleHMapX, scaleHMapY, scaleHMapZ));
 	UpdateShaderMatrices();
 	heightMap->Draw();
+    
 
-	modelMatrix = Matrix4::Translation(Vector3(0, 10.0f, 0)) *
+    // ---------- Second Terrain ----------
+	modelMatrix = Matrix4::Translation(Vector3(0, -420.0f, 0)) *
         Matrix4::Scale(Vector3(noiseScaleX, scaleHMapY, noiseScaleZ));
 
-    glUniform1f(glGetUniformLocation(terrainShader->GetProgram(), "heightScale"), 2000.0f);
-
-	UpdateShaderMatrices();
     // Second terrain
-    glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "diffuseTex"), 0);
+    glUniform1f(glGetUniformLocation(terrainShader->GetProgram(),
+        "heightScale"), 2000.0f);
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, volcanoTexture);
+
+    // Reuse same heightmap texture unless another is intended
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, heightMapTex);
+
+    modelMatrix = Matrix4::Translation(Vector3(0.0f, -420.0f, 0.0f)) *
+        Matrix4::Scale(Vector3(noiseScaleX, scaleHMapY, noiseScaleZ));
+    UpdateShaderMatrices();
     noiseHeightMap->Draw();
-	
-}
-
-void Renderer::DrawLava() {
-	// Draw the lava
-	BindShader(reflectShader);
-
-	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "diffuseTex"), 0);
-	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "cubeTex"), 2);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, lavaTex);
-
-	Vector3 hSize = heightMap->GetHeightmapSize();
-
-	float waterOffset = -20.0f; // Value to move the water up or down
-	modelMatrix = Matrix4::Translation(Vector3(0.0f, 0.0f, 0.0f)) *
-		Matrix4::Translation(Vector3(0.0f, waterOffset, 0.0f)) * // Move water down
-		Matrix4::Scale(Vector3(10.0f, 10.0f, 10.0f)) *
-		Matrix4::Rotation(180, Vector3(1, 0, 0));
-
-	textureMatrix = Matrix4::Translation(Vector3(lavaCycle, 0.0f, lavaCycle)) *
-		Matrix4::Scale(Vector3(1, 1, 1)) *
-		Matrix4::Rotation(lavaRotate, Vector3(0, 0, 1));
-
-	UpdateShaderMatrices();
-
-	quad->Draw();
+    
+    // Unbind textures
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Renderer::DrawNode(SceneNode* n) {

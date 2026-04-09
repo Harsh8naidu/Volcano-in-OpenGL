@@ -1,7 +1,7 @@
 #version 330 core
 
 in vec3 position;  // Vertex position
-in vec2 texCoord;  // Vertex texture coordinates
+in vec2 texCoord;  // Tiles UVs for diffuse textures
 in vec3 normal;    // Vertex normal
 
 uniform mat4 modelMatrix;   // Model matrix

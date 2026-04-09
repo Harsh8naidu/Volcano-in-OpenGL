@@ -124,7 +124,6 @@ void	Shader::SetDefaultAttributes()	{
 	glBindAttribLocation(programID, NORMAL_BUFFER,  "normal");
 	glBindAttribLocation(programID, TANGENT_BUFFER, "tangent");
 	glBindAttribLocation(programID, TEXTURE_BUFFER, "texCoord");
-
 	glBindAttribLocation(programID, WEIGHTVALUE_BUFFER, "jointWeights");
 	glBindAttribLocation(programID, WEIGHTINDEX_BUFFER, "jointIndices");
 }

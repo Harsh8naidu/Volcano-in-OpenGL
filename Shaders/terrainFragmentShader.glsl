@@ -43,8 +43,7 @@ void main() {
         vec3 incident = normalize(lights[i].position - IN.fragPos);
         vec3 halfDir = normalize(incident + viewDir);
         float distance = length(lights[i].position - IN.fragPos);
-        //float attenuation = 1.0 - clamp(distance / lights[i].radius, 0.0, 1.0);
-        float attenuation = 1.0;
+        float attenuation = 1.0 - clamp(distance / lights[i].radius, 0.0, 1.0);
 
         // Diffuse
         float diff = max(dot(norm, incident), 0.0);

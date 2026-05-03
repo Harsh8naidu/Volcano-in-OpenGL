@@ -35,7 +35,7 @@ protected:
     Shader* terrainShader = nullptr;
 
 	HeightMap* heightMap = nullptr;
-	HeightMap* noiseHeightMap = nullptr;
+	HeightMap* heightMap2 = nullptr;
 
 	Mesh* quad = nullptr;
 
@@ -51,6 +51,7 @@ protected:
 	GLuint cubeMap;
 	GLuint lavaTex;
     GLuint heightMapTex;
+    GLuint heightMapTex2;
 	GLuint earthTex;
 	GLuint earthBump;
 	GLuint modelTexture;

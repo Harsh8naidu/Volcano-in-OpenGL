@@ -20,8 +20,7 @@ out Vertex {
 void main(void) {
     vec3 displacedPos = position;
 
-    // Sample height from the height map and displace the vertex position
-    displacedPos.y += texture(heightMap, texCoord).r * heightScale; // Displace vertex based on height map
+    /* Note: Height displacement happens on the CPU side */
 
     // Calculate the final position of the vertex in clip space
     gl_Position = projMatrix * viewMatrix * modelMatrix * vec4(displacedPos, 1.0);

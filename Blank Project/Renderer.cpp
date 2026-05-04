@@ -42,6 +42,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS
 	);
 
+    // TODO: use a vector array to push all textures and check for any that failed to load in a loop instead of individually
 	if (!earthTex || !earthBump || !lavaTex || !volcanoTexture || !cubeMap || !heightMapTex || !heightMapTex2) {
 		return;
     }
@@ -75,14 +76,14 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	camera->SetYaw(90.0f);
 
 	// Lights for the scene
-    sceneLights.push_back(new Light(Vector3(15000.0f, 3000.0f, 25000.0f), Vector4(1.0f, 1.0f, 1.0f, 1), 5000.0f));
-    sceneLights.push_back(new Light(Vector3(25000.0f, 3000.0f, 22000.0f), Vector4(1.0f, 1.0f, 1.0f, 1), 5000.0f));
-    sceneLights.push_back(new Light(Vector3(30000.0f, 3000.0f, 25000.0f), Vector4(1.0f, 1.0f, 1.0f, 1), 5000.0f));
-    sceneLights.push_back(new Light(Vector3(20000.0f, 2000.0f, 30000.0f), Vector4(1.0f, 1.0f, 1.0f, 1), 5000.0f));
+    sceneLights.push_back(new Light(Vector3(15000.0f, 3000.0f, 25000.0f), Vector4(1.0f, 0.95f, 0.6f, 1.0f), 5000.0f));
+    sceneLights.push_back(new Light(Vector3(25000.0f, 3000.0f, 22000.0f), Vector4(1.0f, 0.95f, 0.6f, 1.0f), 5000.0f));
+    sceneLights.push_back(new Light(Vector3(30000.0f, 3000.0f, 25000.0f), Vector4(1.0f, 0.95f, 0.6f, 1.0f), 5000.0f));
+    sceneLights.push_back(new Light(Vector3(20000.0f, 2000.0f, 30000.0f), Vector4(1.0f, 0.95f, 0.6f, 1.0f), 5000.0f));
     
 
 	// Set up the matrices
-	projMatrix = Matrix4::Perspective(1.0f, 50000.0f, (float)width / (float)height, 45.0f);
+	projMatrix = Matrix4::Perspective(10.0f, 90000.0f, (float)width / (float)height, 45.0f);
 
 	// Set up the root node and add the models
 	rootNode = new SceneNode();
@@ -279,9 +280,9 @@ void Renderer::DrawHeightmap() {
         glUniform1f(glGetUniformLocation(terrainShader->GetProgram(), (base + ".radius").c_str()), lRadius);
     }
 
-    float scaleHMapX = 3.0f; 
+    float scaleHMapX = 100.0f; 
     float scaleHMapY = 1.0f; 
-    float scaleHMapZ = 3.0f;
+    float scaleHMapZ = 100.0f;
 
     Vector3 hMapSize = heightMap->GetHeightmapSize();
     Vector3 nMapSize = heightMap2->GetHeightmapSize();
@@ -291,27 +292,28 @@ void Renderer::DrawHeightmap() {
     float noiseScaleZ = scaleHMapZ * (hMapSize.z / nMapSize.z);
 
     // ---------- First Terrain ----------
+    // UV scale for diffuse texturing
+    glUniform2f(glGetUniformLocation(terrainShader->GetProgram(), "uvScale"), 0.01f, 0.01f);
+
     glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "diffuseTex"), 0);
     glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "heightMap"), 1);
-    glUniform1f(glGetUniformLocation(terrainShader->GetProgram(), "heightScale"), 1000.0f);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, volcanoTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
+    
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, heightMapTex2);
     
 
     modelMatrix = Matrix4::Translation(Vector3(0, 20.0f, 0)) *
-        Matrix4::Scale(Vector3(scaleHMapX, 12.0f, scaleHMapZ));
+        Matrix4::Scale(Vector3(scaleHMapX, 12.0f, scaleHMapZ)) *
+        Matrix4::Rotation(-6.2f, Vector3(0, 1, 0));
 	UpdateShaderMatrices();
 	heightMap->Draw();
-    
 
     // ---------- Second Terrain ----------
-    glUniform1f(glGetUniformLocation(terrainShader->GetProgram(), "heightScale"), 1000.0f);
+    // UV scale for diffuse texturing
+    glUniform2f(glGetUniformLocation(terrainShader->GetProgram(), "uvScale"), 0.25f, 0.25f);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, earthTex);
@@ -320,8 +322,9 @@ void Renderer::DrawHeightmap() {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, heightMapTex);
 
-    modelMatrix = Matrix4::Translation(Vector3(0.0f, 390.0f, 0.0f)) *
-        Matrix4::Scale(Vector3(noiseScaleX, 8.0f, noiseScaleZ));
+    modelMatrix = Matrix4::Translation(Vector3(0.0f, 360.0f, 0.0f)) *
+        Matrix4::Scale(Vector3(noiseScaleX, 8.0f, noiseScaleZ)) *
+        Matrix4::Rotation(-6.2f, Vector3(0, 1, 0));
     UpdateShaderMatrices();
     heightMap2->Draw();
     

@@ -236,6 +236,22 @@ void OGLRenderer::SetTextureRepeating(GLuint target, bool repeating)
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+// Multiple lights - up to 16 (defined in shader as MAX_LIGHTS)
+void OGLRenderer::SetShaderLights(const vector<Light*>& lights)
+{
+    glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "lightCount"), (int)lights.size());
+    for (int i = 0; i < (int)lights.size(); i++) {
+        std::string base = "lights[" + std::to_string(i) + "]";
+        Vector3 pos = lights[i]->GetPosition();
+        Vector4 col = lights[i]->GetColour();
+        float radius = lights[i]->GetRadius();
+        glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), (base + ".position").c_str()), 1, (float*)&pos);
+        glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), (base + ".colour").c_str()), 1, (float*)&col);
+        glUniform1f(glGetUniformLocation(currentShader->GetProgram(), (base + ".radius").c_str()), radius);
+    }
+}
+
+// Single light (non-array version) - for backwards compatibility with older shaders that only support one light.
 void OGLRenderer::SetShaderLight(const Light& l)
 {
 	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "lightPos"), 1, (float*)&l.GetPosition());

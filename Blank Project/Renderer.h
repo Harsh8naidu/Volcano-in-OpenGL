@@ -26,6 +26,7 @@ protected:
 	void DrawVolcano();
 	void DrawNode(SceneNode* n);
 
+    // Shaders
 	Shader* lightShader = nullptr;
 	Shader* reflectShader = nullptr;
 	Shader* skyboxShader = nullptr;
@@ -34,11 +35,18 @@ protected:
 	Shader* objModelShader = nullptr;
     Shader* terrainShader = nullptr;
 
+    std::vector<Shader*> shaders;
+
+    // Heightmaps
 	HeightMap* heightMap = nullptr;
 	HeightMap* heightMap2 = nullptr;
 
+    // Meshes
 	Mesh* quad = nullptr;
 
+    std::vector<Mesh*> meshes;
+
+    // Scene Lights
 	Light* sceneLight = nullptr;
     Light* sceneLight2 = nullptr;
     Light* sceneLight3 = nullptr;
@@ -48,6 +56,7 @@ protected:
 
 	Camera* camera = nullptr;
 
+    // Textures
 	GLuint cubeMap;
 	GLuint lavaTex;
     GLuint heightMapTex;
@@ -57,30 +66,10 @@ protected:
 	GLuint modelTexture;
 	GLuint volcanoTexture;
 
-	float lavaRotate;
-	float lavaCycle;
+    std::vector<GLuint> textures;
 
 	SceneNode* rootNode = nullptr;
 
-	Mesh* volcanoMesh = nullptr;
-	Mesh* bonyWallMesh = nullptr;
-	Mesh* monsterMesh = nullptr;
-	Mesh* volcanicRockMesh = nullptr;
-
-	Vector3 straightMoveDirection; // Direction for straight camera movement
-	float cameraTime; // Time for camera movement
-	float rotationSpeed; // Rotation speed for camera
-
-	// Scene change
-	float elapsedTime; // To track the elapsed time
-	bool sceneChanged; // To indicate whether the scene has changed
-	bool isLavaFlowing;
-
-	// Full screen effect
-	//GLuint flashTexture;
-	bool isFlashing;
-	float flashTime;
-
 	// .obj objects
-	ObjModel* testObjModel = nullptr;
+	ObjModel* volcanoModel = nullptr;
 };

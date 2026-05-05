@@ -13,15 +13,15 @@
 #include <filesystem>
 #include <iostream>
 
-// Please find the screenshots and link to the youtube video in a folder 
-// named "Youtube Video and Screenshots" in the root directory of the project
-
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	// Load .obj files
-	testObjModel = new ObjModel(MODELDIR "volcano_model.obj", MATERIALDIR "volcano_model.mtl");
+	volcanoModel = new ObjModel(MODELDIR "volcano_model.obj", MATERIALDIR "volcano_model.mtl");
 
 	// Load the meshes
 	quad = Mesh::GenerateQuad();
+    
+    // Push meshes into a vector array
+    meshes.push_back(quad);
 
 	// Load the heightmaps
 	heightMap = new HeightMap(TEXTUREDIR "Heightmap_01_Mountain.jpg");
@@ -33,7 +33,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	lavaTex = SOIL_load_OGL_texture(TEXTUREDIR "lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 	earthTex = SOIL_load_OGL_texture(TEXTUREDIR "volcanic_rock.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 	volcanoTexture = SOIL_load_OGL_texture(TEXTUREDIR "lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-
+    
 	// Load the cubemap
 	cubeMap = SOIL_load_OGL_cubemap(
 		TEXTUREDIR "right.jpg", TEXTUREDIR "left.jpg",
@@ -42,9 +42,20 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS
 	);
 
-    // TODO: use a vector array to push all textures and check for any that failed to load in a loop instead of individually
-	if (!earthTex || !earthBump || !lavaTex || !volcanoTexture || !cubeMap || !heightMapTex || !heightMapTex2) {
-		return;
+    // Push textures into a vector array
+    textures.push_back(heightMapTex);
+    textures.push_back(heightMapTex2);
+    textures.push_back(lavaTex);
+    textures.push_back(earthTex);
+    textures.push_back(volcanoTexture);
+    textures.push_back(cubeMap);
+
+    // Check if any texture failed to load
+    for (GLuint tex : textures) {
+        if (!tex) {
+            std::cerr << "Failed to load a texture. Check the file paths and ensure the files exist.\n";
+            return;
+        }
     }
 
 	// Set the texture to repeat
@@ -59,16 +70,20 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	lightShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
     terrainShader = new Shader("terrainVertexShader.glsl", "terrainFragmentShader.glsl");
 
-	if (!reflectShader->LoadSuccess() || 
-        !skyboxShader->LoadSuccess() || 
-        !lightShader->LoadSuccess() || 
-        !modelShader->LoadSuccess() || 
-        !objModelShader->LoadSuccess() ||
-        !terrainShader->LoadSuccess()) {
-		return;
-    }
+    shaders.push_back(objModelShader);
+    shaders.push_back(modelShader);
+    shaders.push_back(reflectShader);
+    shaders.push_back(skyboxShader);
+    shaders.push_back(lightShader);
+    shaders.push_back(terrainShader);
 
-	Vector3 hMapSize = heightMap->GetHeightmapSize();
+    // Check if any shader failed to load
+    for (Shader* shader : shaders) {
+        if (!shader->LoadSuccess()) {
+            std::cerr << "Failed to load a shader. Check the file paths and ensure the files exist.\n";
+            return;
+        }
+    }
 
 	// Set up the camera and light
 	camera = new Camera(-10.0f, 190.0f, Vector3(10000.0f, 3000.0f, 16000.0f)); // -0.88f
@@ -80,7 +95,6 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
     sceneLights.push_back(new Light(Vector3(25000.0f, 3000.0f, 22000.0f), Vector4(1.0f, 0.95f, 0.6f, 1.0f), 5000.0f));
     sceneLights.push_back(new Light(Vector3(30000.0f, 3000.0f, 25000.0f), Vector4(1.0f, 0.95f, 0.6f, 1.0f), 5000.0f));
     sceneLights.push_back(new Light(Vector3(20000.0f, 2000.0f, 30000.0f), Vector4(1.0f, 0.95f, 0.6f, 1.0f), 5000.0f));
-    
 
 	// Set up the matrices
 	projMatrix = Matrix4::Perspective(10.0f, 90000.0f, (float)width / (float)height, 45.0f);
@@ -89,19 +103,11 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	rootNode = new SceneNode();
 	//rootNode->AddChild(new Volcano(volcanoMesh, volcanoTexture));
 
-	straightMoveDirection = Vector3(0, 0, 1); // Moving along negative Z-axis
-
-	elapsedTime = 0.0f;
-	sceneChanged = false;
-	isLavaFlowing = true;
-
 	// Set up OpenGL settings
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-	lavaRotate = 0.0f;
-	lavaCycle = 0.0f;
 	init = true;
 }
 
@@ -112,29 +118,27 @@ Renderer::~Renderer(void) {
 	delete quad;
 
 	// shaders cleanup
-	delete reflectShader;
-	delete skyboxShader;
-	delete lightShader;
-	delete modelShader;
-	delete flashShader;
-	delete objModelShader;
+    for (Shader* shader : shaders) {
+        delete shader;
+    }
 
 	// light cleanup
-	delete sceneLight;
+    for (Light* light : sceneLights) {
+        delete light;
+    }
 
 	// models cleanup
-	delete volcanoMesh;
-	delete bonyWallMesh;
-	delete monsterMesh;
-	delete volcanicRockMesh;
+    for (Mesh* mesh : meshes) {
+        delete mesh;
+    }
 
 	// textures cleanup
-	glDeleteTextures(1, &lavaTex);
-	glDeleteTextures(1, &earthTex);
-	glDeleteTextures(1, &earthBump);
+    for (GLuint tex : textures) {
+        glDeleteTextures(1, &tex);
+    }
 
 	// objects cleanup
-	delete testObjModel;
+    delete volcanoModel;
 }
 
 void Renderer::UpdateScene(float dt) {
@@ -146,9 +150,8 @@ void Renderer::UpdateScene(float dt) {
 
 void Renderer::RenderScene() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	
-	DrawSkybox();
+    DrawSkybox();
 	DrawHeightmap();
 	DrawVolcano();
 	DrawNode(rootNode);
@@ -191,12 +194,12 @@ void Renderer::DrawVolcano() {
     }
 
     // Iterate through all the material ranges, then bind and draw them
-    const std::vector<MaterialRange>& materialRange = testObjModel->GetMaterialRanges();
+    const std::vector<MaterialRange>& materialRange = volcanoModel->GetMaterialRanges();
 
-    glBindVertexArray(testObjModel->modelVAO); // Bind the VAO
+    glBindVertexArray(volcanoModel->modelVAO); // Bind the VAO
 
     for (const MaterialRange& range : materialRange) {
-        const Material& mat = testObjModel->GetMaterialByName(range.materialName);
+        const Material& mat = volcanoModel->GetMaterialByName(range.materialName);
 
         // Bind the material properties to the shader
         glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "shininess"), mat.shininess);
@@ -280,9 +283,9 @@ void Renderer::DrawHeightmap() {
         glUniform1f(glGetUniformLocation(terrainShader->GetProgram(), (base + ".radius").c_str()), lRadius);
     }
 
-    float scaleHMapX = 100.0f; 
+    float scaleHMapX = 50.0f; 
     float scaleHMapY = 1.0f; 
-    float scaleHMapZ = 100.0f;
+    float scaleHMapZ = 50.0f;
 
     Vector3 hMapSize = heightMap->GetHeightmapSize();
     Vector3 nMapSize = heightMap2->GetHeightmapSize();
@@ -334,8 +337,6 @@ void Renderer::DrawHeightmap() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
-
-
 
 void Renderer::DrawNode(SceneNode* n) {
 	// Draw all the children of the node

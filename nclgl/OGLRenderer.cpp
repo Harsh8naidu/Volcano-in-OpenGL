@@ -247,7 +247,7 @@ void OGLRenderer::BindShader(Shader*s) {
 	glUseProgram(s->GetProgram());
 }
 
-void OGLRenderer::BindTexture(GLuint texture, GLenum textureUnit, const char* uniformName, GLuint fallback = 0) {
+void OGLRenderer::BindTexture(GLuint texture, GLenum textureUnit, const char* uniformName, GLuint fallback) {
     if (texture > 0) {
         glActiveTexture(textureUnit);
         glBindTexture(GL_TEXTURE_2D, texture > 0 ? texture : fallback);

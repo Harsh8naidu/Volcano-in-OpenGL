@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include "Vector3.h"
 #include "glad/glad.h"

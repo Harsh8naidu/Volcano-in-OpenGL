@@ -142,6 +142,25 @@ OGLRenderer::OGLRenderer(Window &window)	{
 
 	currentShader = 0;							//0 is the 'null' object name for shader programs...
 
+    // Create default fallback textures
+    unsigned char white[] = { 255, 255, 255, 255 };
+    unsigned char grey[] = { 128, 128, 128, 255 };
+    unsigned char black[] = { 0, 0, 0, 255 };
+
+    glGenTextures(1, &defaultDiffuse);
+    glBindTexture(GL_TEXTURE_2D, defaultDiffuse);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, white);
+
+    glGenTextures(1, &defaultRoughness);
+    glBindTexture(GL_TEXTURE_2D, defaultRoughness);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, grey);
+
+    glGenTextures(1, &defaultMetallic);
+    glBindTexture(GL_TEXTURE_2D, defaultMetallic);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, black);
+
+    glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture
+
 	window.SetRenderer(this);					//Tell our window about the new renderer! (Which will in turn resize the renderer window to fit...)
 }
 
@@ -228,12 +247,39 @@ void OGLRenderer::BindShader(Shader*s) {
 	glUseProgram(s->GetProgram());
 }
 
+void OGLRenderer::BindTexture(GLuint texture, GLenum textureUnit, const char* uniformName, GLuint fallback = 0) {
+    if (texture > 0) {
+        glActiveTexture(textureUnit);
+        glBindTexture(GL_TEXTURE_2D, texture > 0 ? texture : fallback);
+        GLint loc = glGetUniformLocation(currentShader->GetProgram(), uniformName);
+        if (loc >= 0) { // Only set the uniform if it exists in the shader
+            glUniform1i(loc, textureUnit - GL_TEXTURE0); // Set the uniform to the correct texture unit index
+        }
+    }
+}
+
 void OGLRenderer::SetTextureRepeating(GLuint target, bool repeating)
 {
 	glBindTexture(GL_TEXTURE_2D, target);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, repeating ? GL_REPEAT : GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, repeating ? GL_REPEAT : GL_CLAMP);
 	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void OGLRenderer::BindMaterial(const Material& mat)
+{
+    glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "shininess"), mat.shininess);
+    glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "ambient"), 1, (float*)&mat.ambient);
+    glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "specular"), 1, (float*)&mat.specular);
+    glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "emission"), 1, (float*)&mat.emission);
+    glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "ior"), mat.ior);
+    glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "dissolveFactor"), mat.dissolveFactor);
+    glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "illuminationModel"), mat.illuminationModel);
+
+    // Bind textures if they exist, and set the corresponding uniform names in the shader
+    BindTexture(mat.diffuseTexture, GL_TEXTURE0, "diffuseTexture", defaultDiffuse);
+    BindTexture(mat.roughnessTexture, GL_TEXTURE1, "roughnessTexture", defaultRoughness);
+    BindTexture(mat.metallicTexture, GL_TEXTURE2, "metallicTexture", defaultMetallic);
 }
 
 // Multiple lights - up to 16 (defined in shader as MAX_LIGHTS)

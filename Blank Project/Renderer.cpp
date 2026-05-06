@@ -160,14 +160,6 @@ void Renderer::RenderScene() {
 void Renderer::DrawVolcano() {
 	BindShader(objModelShader);
 
-    // Assign sampler units explicitly
-    glUniform1i(glGetUniformLocation(objModelShader->GetProgram(),
-        "diffuseTexture"), 0);
-    glUniform1i(glGetUniformLocation(objModelShader->GetProgram(),
-        "roughnessTexture"), 1);
-    glUniform1i(glGetUniformLocation(objModelShader->GetProgram(),
-        "metallicTexture"), 2);
-
 	modelMatrix = Matrix4::Translation(Vector3(10000.0f, 90.0f, 16000.0f)) *
 		Matrix4::Scale(Vector3(5.0f, 5.0f, 5.0f)) *
 		Matrix4::Rotation(90, Vector3(0, 1, 0)) * 
@@ -175,76 +167,17 @@ void Renderer::DrawVolcano() {
 
     UpdateShaderMatrices();
 
-    // Camera position
     Vector3 camPos = camera->GetPosition();
     glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "cameraPos"), 1, (float*)&camPos);
 
-    // Upload lights
-    int lightCount = (int)sceneLights.size();
-    glUniform1i(glGetUniformLocation(objModelShader->GetProgram(), "lightCount"), lightCount);
-
-    for (int i = 0; i < lightCount; i++) {
-        std::string base = "lights[" + std::to_string(i) + "]";
-        Vector3 lPos = sceneLights[i]->GetPosition();
-        Vector4 lCol = sceneLights[i]->GetColour();
-        float lRadius = sceneLights[i]->GetRadius();
-        glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), (base + ".position").c_str()), 1, (float*)&lPos);
-        glUniform4fv(glGetUniformLocation(objModelShader->GetProgram(), (base + ".color").c_str()), 1, (float*)&lCol);
-        glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), (base + ".radius").c_str()), lRadius);
-    }
-
-    // Iterate through all the material ranges, then bind and draw them
-    const std::vector<MaterialRange>& materialRange = volcanoModel->GetMaterialRanges();
+    SetShaderLights(sceneLights);
 
     glBindVertexArray(volcanoModel->modelVAO); // Bind the VAO
-
-    for (const MaterialRange& range : materialRange) {
-        const Material& mat = volcanoModel->GetMaterialByName(range.materialName);
-
-        // Bind the material properties to the shader
-        glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "shininess"), mat.shininess);
-        glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "ambient"), 1, (float*)&mat.ambient);
-        glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "specular"), 1, (float*)&mat.specular);
-        glUniform3fv(glGetUniformLocation(objModelShader->GetProgram(), "emission"), 1, (float*)&mat.emission);
-        glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "ior"), mat.ior);
-        glUniform1f(glGetUniformLocation(objModelShader->GetProgram(), "dissolveFactor"), mat.dissolveFactor);
-        glUniform1i(glGetUniformLocation(objModelShader->GetProgram(), "illuminationModel"), mat.illuminationModel);
-
-        // Texture binding helper function
-        auto bindTexture = [&](GLuint texture, GLenum textureUnit, const char* uniformName) {
-            if (texture > 0) {
-                glActiveTexture(textureUnit);
-                glBindTexture(GL_TEXTURE_2D, texture);
-                GLint loc = glGetUniformLocation(objModelShader->GetProgram(), uniformName);
-                if (loc != -1) {
-                    glUniform1i(loc, textureUnit - GL_TEXTURE0);
-                }
-            }
-        };
-
-        // Bind textures
-        bindTexture(mat.diffuseTexture, GL_TEXTURE0, "diffuseTexture");
-        bindTexture(mat.roughnessTexture, GL_TEXTURE1, "roughnessTexture");
-        bindTexture(mat.metallicTexture, GL_TEXTURE2, "metallicTexture");
-
-        if (mat.diffuseTexture == 0) {
-            std::cout << "Material " << range.materialName
-                << " has no diffuse texture. Using fallback.\n";
-        }
-
-        // Draw the model
+    for (const MaterialRange& range : volcanoModel->GetMaterialRanges()) {
+        BindMaterial(volcanoModel->GetMaterialByName(range.materialName));
         glDrawElements(GL_TRIANGLES, range.indexCount, GL_UNSIGNED_INT, (void*)(range.startIndex * sizeof(unsigned int)));
     }
-
     glBindVertexArray(0);
-
-    // Reset texture state
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Renderer::DrawSkybox() {
@@ -266,22 +199,9 @@ void Renderer::DrawHeightmap() {
 	// Draw the heightmap
 	BindShader(terrainShader);
 
-    // Camera position
     glUniform3fv(glGetUniformLocation(terrainShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 
-    // Upload all lights to shader
-    int lightCount = (int)sceneLights.size();
-    glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "lightCount"), lightCount);
-    
-    for (int i = 0; i < lightCount; i++) {
-        std::string base = "lights[" + std::to_string(i) + "]";
-        Vector3 lPos = sceneLights[i]->GetPosition();
-        Vector4 lCol = sceneLights[i]->GetColour();
-        float lRadius = sceneLights[i]->GetRadius();
-        glUniform3fv(glGetUniformLocation(terrainShader->GetProgram(), (base + ".position").c_str()), 1, (float*)&lPos);
-        glUniform4fv(glGetUniformLocation(terrainShader->GetProgram(), (base + ".color").c_str()), 1, (float*)&lCol);
-        glUniform1f(glGetUniformLocation(terrainShader->GetProgram(), (base + ".radius").c_str()), lRadius);
-    }
+    SetShaderLights(sceneLights);
 
     float scaleHMapX = 50.0f; 
     float scaleHMapY = 1.0f; 
@@ -295,19 +215,12 @@ void Renderer::DrawHeightmap() {
     float noiseScaleZ = scaleHMapZ * (hMapSize.z / nMapSize.z);
 
     // ---------- First Terrain ----------
-    // UV scale for diffuse texturing
     glUniform2f(glGetUniformLocation(terrainShader->GetProgram(), "uvScale"), 0.01f, 0.01f);
-
     glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "diffuseTex"), 0);
     glUniform1i(glGetUniformLocation(terrainShader->GetProgram(), "heightMap"), 1);
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, volcanoTexture);
+    BindTexture(volcanoTexture, GL_TEXTURE0, "diffuseTex");
+    BindTexture(heightMapTex2, GL_TEXTURE1, "heightMap");
     
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, heightMapTex2);
-    
-
     modelMatrix = Matrix4::Translation(Vector3(0, 20.0f, 0)) *
         Matrix4::Scale(Vector3(scaleHMapX, 12.0f, scaleHMapZ)) *
         Matrix4::Rotation(-6.2f, Vector3(0, 1, 0));
@@ -317,25 +230,14 @@ void Renderer::DrawHeightmap() {
     // ---------- Second Terrain ----------
     // UV scale for diffuse texturing
     glUniform2f(glGetUniformLocation(terrainShader->GetProgram(), "uvScale"), 0.25f, 0.25f);
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, earthTex);
-
-    // Reuse same heightmap texture unless another is intended
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, heightMapTex);
+    BindTexture(earthTex, GL_TEXTURE0, "diffuseTex");
+    BindTexture(heightMapTex, GL_TEXTURE1, "heightMap");
 
     modelMatrix = Matrix4::Translation(Vector3(0.0f, 360.0f, 0.0f)) *
         Matrix4::Scale(Vector3(noiseScaleX, 8.0f, noiseScaleZ)) *
         Matrix4::Rotation(-6.2f, Vector3(0, 1, 0));
     UpdateShaderMatrices();
     heightMap2->Draw();
-    
-    // Unbind textures
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Renderer::DrawNode(SceneNode* n) {

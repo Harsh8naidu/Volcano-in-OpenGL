@@ -37,6 +37,7 @@ _-_-_-_-_-_-_-""  ""
 #include "Shader.h"
 #include "Mesh.h"
 #include "Light.h"
+#include "Material.h"
 
 using std::vector;
 
@@ -72,6 +73,8 @@ protected:
 	void			SetTextureRepeating(GLuint target, bool state);
 	void 			SetShaderLight(const Light &l);
     void            SetShaderLights(const vector<Light*>& l);
+    void            BindMaterial(const Material& mat);
+    void            BindTexture(GLuint texture, GLenum textureUnit, const char* uniformName, GLuint fallback = 0);
 
 	void StartDebugGroup(const std::string& s) {
 		glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, (GLsizei)s.length(), s.c_str());
@@ -97,6 +100,10 @@ private:
 	Shader* currentShader;	
 	HDC		deviceContext;	//...Device context?
 	HGLRC	renderContext;	//Permanent Rendering Context
+
+    GLuint defaultDiffuse; // Default diffuse texture (white)
+    GLuint defaultRoughness; // Default roughness texture (white)
+    GLuint defaultMetallic; // Default metallic texture (white)
 #ifdef _DEBUG
 	static void CALLBACK DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam);
 #endif

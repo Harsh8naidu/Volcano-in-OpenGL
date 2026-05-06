@@ -187,8 +187,9 @@ void Renderer::DrawSkybox() {
 	BindShader(skyboxShader);
 	UpdateShaderMatrices();
 
-	glActiveTexture(GL_TEXTURE2);
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
+    glUniform1i(glGetUniformLocation(skyboxShader->GetProgram(), "cubeTex"), 0);
 
 	quad->Draw();
 

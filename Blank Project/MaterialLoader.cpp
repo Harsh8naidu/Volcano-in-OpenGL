@@ -70,21 +70,18 @@ bool MaterialLoader::LoadMTL(const std::string& filePath) {
             lineStream >> texturePath;
             std::string fullPath = materialDir + texturePath;
             currentMaterial.diffuseTexture = SOIL_load_OGL_texture(fullPath.c_str(), SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-			std::cout << "Diffuse texture: " << currentMaterial.diffuseTexture << std::endl;
         }
         else if (type == "map_Ns") { // Roughness texture
             std::string texturePath;
             lineStream >> texturePath;
             std::string fullPath = materialDir + texturePath;
             currentMaterial.roughnessTexture = SOIL_load_OGL_texture(fullPath.c_str(), SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-			std::cout << "Roughness texture: " << currentMaterial.roughnessTexture << std::endl;
         }
 		else if (type == "map_refl") { // Metallic texture
 			std::string texturePath;
 			lineStream >> texturePath;
             std::string fullPath = materialDir + texturePath;
 			currentMaterial.metallicTexture = SOIL_load_OGL_texture(fullPath.c_str(), SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-			std::cout << "Metallic texture: " << currentMaterial.metallicTexture << std::endl;
         }
     }
 

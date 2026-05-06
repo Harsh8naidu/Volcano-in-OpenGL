@@ -24,6 +24,8 @@ protected:
 	void DrawHeightmap();
 	void DrawSkybox();
 	void DrawVolcano();
+    
+
 	void DrawNode(SceneNode* n);
 
     // Shaders

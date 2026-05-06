@@ -97,7 +97,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
     sceneLights.push_back(new Light(Vector3(20000.0f, 2000.0f, 30000.0f), Vector4(1.0f, 0.95f, 0.6f, 1.0f), 5000.0f));
 
 	// Set up the matrices
-	projMatrix = Matrix4::Perspective(10.0f, 90000.0f, (float)width / (float)height, 45.0f);
+	projMatrix = Matrix4::Perspective(1.0f, 500000.0f, (float)width / (float)height, 45.0f);
 
 	// Set up the root node and add the models
 	rootNode = new SceneNode();
@@ -154,7 +154,7 @@ void Renderer::RenderScene() {
     DrawSkybox();
 	DrawHeightmap();
 	DrawVolcano();
-	DrawNode(rootNode);
+	//DrawNode(rootNode);
 }
 
 void Renderer::DrawVolcano() {
@@ -204,9 +204,9 @@ void Renderer::DrawHeightmap() {
 
     SetShaderLights(sceneLights);
 
-    float scaleHMapX = 50.0f; 
+    float scaleHMapX = 10.0f; 
     float scaleHMapY = 1.0f; 
-    float scaleHMapZ = 50.0f;
+    float scaleHMapZ = 10.0f;
 
     Vector3 hMapSize = heightMap->GetHeightmapSize();
     Vector3 nMapSize = heightMap2->GetHeightmapSize();
@@ -230,7 +230,7 @@ void Renderer::DrawHeightmap() {
 
     // ---------- Second Terrain ----------
     // UV scale for diffuse texturing
-    glUniform2f(glGetUniformLocation(terrainShader->GetProgram(), "uvScale"), 0.25f, 0.25f);
+    glUniform2f(glGetUniformLocation(terrainShader->GetProgram(), "uvScale"), 0.8f, 0.8f);
     BindTexture(earthTex, GL_TEXTURE0, "diffuseTex");
     BindTexture(heightMapTex, GL_TEXTURE1, "heightMap");
 
@@ -240,6 +240,8 @@ void Renderer::DrawHeightmap() {
     UpdateShaderMatrices();
     heightMap2->Draw();
 }
+
+
 
 void Renderer::DrawNode(SceneNode* n) {
 	// Draw all the children of the node

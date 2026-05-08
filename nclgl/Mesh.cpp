@@ -477,6 +477,7 @@ Mesh* Mesh::LoadFromMeshFile(const string& name) {
 
 		file >> chunkType;
 
+        std::cout << "Reading chunk " << i << " of type " << chunkType << std::endl;
 		switch ((GeometryChunkTypes)chunkType) {
 		case GeometryChunkTypes::VPositions:ReadTextFloats(file, readPositions, numVertices);  break;
 		case GeometryChunkTypes::VColors:	ReadTextFloats(file, readColours, numVertices);  break;
@@ -493,10 +494,12 @@ Mesh* Mesh::LoadFromMeshFile(const string& name) {
 		case GeometryChunkTypes::BindPoseInv:		ReadRigPose(file, &mesh->inverseBindPose);  break;
 		case GeometryChunkTypes::SubMeshes: 		ReadSubMeshes(file, numMeshes, mesh->meshLayers); break;
 		case GeometryChunkTypes::SubMeshNames: 		ReadSubMeshNames(file, numMeshes, mesh->layerNames); break;
+        default:
+            std::cout << "FOUND UNKNOWN CHUNK TYPE: " << chunkType << std::endl;
+            break;
 		}
 	}
 	//Now that the data has been read, we can shove it into the actual Mesh object
-
 	mesh->numVertices	= numVertices;
 	mesh->numIndices	= numIndices;
 

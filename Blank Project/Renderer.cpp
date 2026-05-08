@@ -19,9 +19,45 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// Load the meshes
 	quad = Mesh::GenerateQuad();
+    bird = Mesh::LoadFromMeshFile("fly.msh");
     
     // Push meshes into a vector array
     meshes.push_back(quad);
+    meshes.push_back(bird);
+
+    for (Mesh* mesh : meshes) {
+        if (!mesh) {
+            std::cerr << "Failed to load a mesh. Check the file paths and ensure the files exist.\n";
+            return;
+        }
+    }
+
+    // Load the animation files
+    birdAnim = new MeshAnimation("FlyAnim.anm");
+
+    animations.push_back(birdAnim);
+
+    for (MeshAnimation* anim : animations) {
+        if (!anim) {
+            std::cerr << "Failed to load an animation. Check the file paths and ensure the files exist.\n";
+            return;
+        }
+    }
+
+    // Load the material
+    birdMaterial = new MeshMaterial("fly.mat");
+
+    meshMaterials.push_back(birdMaterial);
+
+    for (MeshMaterial* mtl : meshMaterials) {
+        if (!mtl) {
+            std::cerr << "Failed to load a mesh's material. Check the file paths and ensure the files exist.\n";
+            return;
+        }
+    }
+
+    // Register the animation
+    RegisterAnimatedMesh(bird, birdAnim, birdMaterial);
 
 	// Load the heightmaps
 	heightMap = new HeightMap(TEXTUREDIR "Heightmap_01_Mountain.jpg");
@@ -34,7 +70,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	earthTex = SOIL_load_OGL_texture(TEXTUREDIR "volcanic_rock.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
 	volcanoTexture = SOIL_load_OGL_texture(TEXTUREDIR "lava_texture.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
     
-	// Load the cubemap
+	// Load the cubemap textures
 	cubeMap = SOIL_load_OGL_cubemap(
 		TEXTUREDIR "right.jpg", TEXTUREDIR "left.jpg",
 		TEXTUREDIR "top.jpg", TEXTUREDIR "bottom.jpg",
@@ -69,6 +105,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
 	lightShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
     terrainShader = new Shader("terrainVertexShader.glsl", "terrainFragmentShader.glsl");
+    skinningShader = new Shader("SkinningVertex.glsl", "TexturedFragment.glsl");
 
     shaders.push_back(objModelShader);
     shaders.push_back(modelShader);
@@ -86,7 +123,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
     }
 
 	// Set up the camera and light
-	camera = new Camera(-10.0f, 190.0f, Vector3(10000.0f, 3000.0f, 16000.0f)); // -0.88f
+	camera = new Camera(-10.0f, 190.0f, Vector3(0.0f, 0.0f, 0.0f)); // -0.88f
 	camera->SetPitch(5.0f);
 	camera->SetYaw(90.0f);
 
@@ -145,6 +182,14 @@ void Renderer::UpdateScene(float dt) {
 	//Update the camera
 	camera->UpdateCamera(dt);
 	viewMatrix = camera->BuildViewMatrix();
+
+    for (auto& entry : animatedMeshes) {
+        entry.frameTime -= dt;
+        while (entry.frameTime < 0.0f) {
+            entry.currentFrame = (entry.currentFrame + 1) % entry.animation->GetFrameCount();
+            entry.frameTime += 1.0f / entry.animation->GetFrameRate(); // 
+        }
+    }
 	//rootNode->Update(dt);
 }
 
@@ -154,6 +199,7 @@ void Renderer::RenderScene() {
     DrawSkybox();
 	DrawHeightmap();
 	DrawVolcano();
+    DrawAnimatedMesh();
 	//DrawNode(rootNode);
 }
 
@@ -241,7 +287,65 @@ void Renderer::DrawHeightmap() {
     heightMap2->Draw();
 }
 
+void Renderer::DrawAnimatedMesh() {
+    BindShader(skinningShader);
 
+    for (AnimatedMesh& entry : animatedMeshes) {
+        modelMatrix = Matrix4::Translation(Vector3(-10.0f, 0.0f, 0.0f)) *
+            Matrix4::Scale(Vector3(4, 4, 4));
+        UpdateShaderMatrices();
+
+        // Upload animation joint matrices
+        vector<Matrix4> frameMatrices;
+        const Matrix4* invBindPose = bird->GetInverseBindPose();
+        const Matrix4* frameData = birdAnim->GetJointData(entry.currentFrame);
+
+        
+        for (int i = 0; i < bird->GetJointCount(); i++) {
+           frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
+        }
+
+        int j = glGetUniformLocation(skinningShader->GetProgram(), "joints");
+        glUniformMatrix4fv(j, frameMatrices.size(), false, (float*)frameMatrices.data());
+
+        // Draw brid submeshes with their textures
+        for (int i = 0; i < bird->GetSubMeshCount(); i++) {
+            if (i < (int)entry.textures.size()) {
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, entry.textures[i]);
+            }
+            entry.mesh->DrawSubMesh(i);
+        }
+    }
+}
+
+void Renderer::RegisterAnimatedMesh(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material) {
+    AnimatedMesh entry;
+    entry.mesh = mesh;
+    entry.animation = anim;
+    entry.material = material;
+
+    for (int i = 0; i < mesh->GetSubMeshCount(); ++i) {
+        const MeshMaterialEntry* matEntry = material->GetMaterialForLayer(i);
+        const string* filename = nullptr;
+        if (matEntry && matEntry->GetEntry("Diffuse", &filename) && filename) {
+            // Load the actual diffuse texture
+            GLuint texID = SOIL_load_OGL_texture(
+                (TEXTUREDIR + *filename).c_str(),
+                SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID,
+                SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS
+            );
+            heightMapTex = SOIL_load_OGL_texture(TEXTUREDIR "noise.png", SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
+            entry.textures.push_back(texID);
+        }
+        else {
+            // Fall back to default white texture
+            entry.textures.push_back(defaultDiffuse);
+        }
+    }
+
+    animatedMeshes.push_back(entry);
+}
 
 void Renderer::DrawNode(SceneNode* n) {
 	// Draw all the children of the node

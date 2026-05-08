@@ -96,14 +96,15 @@ protected:
 	int		height;			//Render area height (not quite the same as window height)
 	bool	init;			//Did the renderer initialise properly?
 
+    GLuint defaultDiffuse; // Default diffuse texture (white)
+    GLuint defaultRoughness; // Default roughness texture (white)
+    GLuint defaultMetallic; // Default metallic texture (white)
+
 private:
 	Shader* currentShader;	
 	HDC		deviceContext;	//...Device context?
 	HGLRC	renderContext;	//Permanent Rendering Context
-
-    GLuint defaultDiffuse; // Default diffuse texture (white)
-    GLuint defaultRoughness; // Default roughness texture (white)
-    GLuint defaultMetallic; // Default metallic texture (white)
+    
 #ifdef _DEBUG
 	static void CALLBACK DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam);
 #endif

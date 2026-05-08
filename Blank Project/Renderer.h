@@ -2,6 +2,7 @@
 #include "../nclgl/OGLRenderer.h"
 #include "../nclgl/Vector3.h"
 #include "ObjModel.h"
+#include <nclgl/MeshAnimation.h>
 
 class Camera;
 class Shader;
@@ -10,6 +11,15 @@ class Mesh;
 class MeshAnimation;
 class MeshMaterial;
 class SceneNode;
+
+struct AnimatedMesh {
+    Mesh* mesh;
+    MeshAnimation* animation;
+    MeshMaterial* material;
+    std::vector<GLuint> textures;
+    int currentFrame = 0;
+    float frameTime = 0.0f;
+};
 
 class Renderer : public OGLRenderer {
 public:
@@ -24,8 +34,8 @@ protected:
 	void DrawHeightmap();
 	void DrawSkybox();
 	void DrawVolcano();
-    
-
+    void RegisterAnimatedMesh(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material);
+    void DrawAnimatedMesh();
 	void DrawNode(SceneNode* n);
 
     // Shaders
@@ -36,6 +46,7 @@ protected:
 	Shader* flashShader = nullptr;
 	Shader* objModelShader = nullptr;
     Shader* terrainShader = nullptr;
+    Shader* skinningShader = nullptr;
 
     std::vector<Shader*> shaders;
 
@@ -45,8 +56,21 @@ protected:
 
     // Meshes
 	Mesh* quad = nullptr;
+    Mesh* bird = nullptr;
 
     std::vector<Mesh*> meshes;
+
+    // Animations
+    MeshAnimation* birdAnim = nullptr;
+
+    std::vector<MeshAnimation*> animations;
+    
+    std::vector<AnimatedMesh> animatedMeshes;
+
+   // Materials
+    MeshMaterial* birdMaterial = nullptr;
+
+    std::vector<MeshMaterial*> meshMaterials;
 
     // Scene Lights
 	Light* sceneLight = nullptr;

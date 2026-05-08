@@ -20,12 +20,12 @@ void main(void) {
    vec4 skelPos = vec4(0, 0, 0, 0);
 
    for(int i = 0; i < 4; i++){
-       int jointIndex = jointIndices[i];
-       float jointWeights = jointWeights[i];
+       int jIndex = jointIndices[i];
+       float jWeights = jointWeights[i];
 
-       skelPos += joints[jointIndex] * localPos * jointWeights;
+        // Accumulate the position based on bone influence
+       skelPos += (joints[jIndex] * localPos) * jWeights;
    }
-    mat4 mvp = projMatrix * viewMatrix * modelMatrix;
-    gl_Position = mvp * vec4(skelPos.xyz, 1.0f);
+    gl_Position = projMatrix * viewMatrix * modelMatrix * vec4(skelPos.xyz, 1.0);
     OUT.texCoord = texCoord;
 }

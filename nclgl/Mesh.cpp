@@ -477,7 +477,6 @@ Mesh* Mesh::LoadFromMeshFile(const string& name) {
 
 		file >> chunkType;
 
-        std::cout << "Reading chunk " << i << " of type " << chunkType << std::endl;
 		switch ((GeometryChunkTypes)chunkType) {
 		case GeometryChunkTypes::VPositions:ReadTextFloats(file, readPositions, numVertices);  break;
 		case GeometryChunkTypes::VColors:	ReadTextFloats(file, readColours, numVertices);  break;

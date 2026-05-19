@@ -56,8 +56,16 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
         }
     }
 
-    // Register the animation
-    RegisterAnimatedMesh(bird, birdAnim, birdMaterial);
+    // Mountain center - adjust to match your heightmap
+    Vector3 mountainCenter = Vector3(7000.0f, 400.0f, 7500.0f);
+    float orbitRadius = 2000.0f;
+    float birdScale = 200.0f;
+
+    // Spread birds evenly around the circle using PI
+    RegisterAnimatedMesh(bird, birdAnim, birdMaterial, mountainCenter, orbitRadius, 0.0f, 0.5f, 2500.0f, birdScale);
+    RegisterAnimatedMesh(bird, birdAnim, birdMaterial, mountainCenter, orbitRadius, PI * 0.5f, 0.6f, 2700.0f, birdScale);
+    RegisterAnimatedMesh(bird, birdAnim, birdMaterial, mountainCenter, orbitRadius, PI, 0.4f, 2600.0f, birdScale);
+    RegisterAnimatedMesh(bird, birdAnim, birdMaterial, mountainCenter, orbitRadius, PI * 1.5f, 0.5f, 2800.0f, birdScale);
 
 	// Load the heightmaps
 	heightMap = new HeightMap(TEXTUREDIR "Heightmap_01_Mountain.jpg");
@@ -123,9 +131,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
     }
 
 	// Set up the camera and light
-	camera = new Camera(-10.0f, 190.0f, Vector3(0.0f, 0.0f, 0.0f)); // -0.88f
-	camera->SetPitch(5.0f);
-	camera->SetYaw(90.0f);
+	camera = new Camera(-10.0f, 190.0f, Vector3(2500.0f, 2000.0f, 0.0f)); // -0.88f
+	camera->SetPitch(0.0f);
+	camera->SetYaw(180.0f);
 
 	// Lights for the scene
     sceneLights.push_back(new Light(Vector3(15000.0f, 3000.0f, 25000.0f), Vector4(1.0f, 0.95f, 0.6f, 1.0f), 5000.0f));
@@ -134,7 +142,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
     sceneLights.push_back(new Light(Vector3(20000.0f, 2000.0f, 30000.0f), Vector4(1.0f, 0.95f, 0.6f, 1.0f), 5000.0f));
 
 	// Set up the matrices
-	projMatrix = Matrix4::Perspective(1.0f, 500000.0f, (float)width / (float)height, 45.0f);
+	projMatrix = Matrix4::Perspective(1.0f, 50000.0f, (float)width / (float)height, 45.0f);
 
 	// Set up the root node and add the models
 	rootNode = new SceneNode();
@@ -184,11 +192,15 @@ void Renderer::UpdateScene(float dt) {
 	viewMatrix = camera->BuildViewMatrix();
 
     for (auto& entry : animatedMeshes) {
+        // Animation Update
         entry.frameTime -= dt;
         while (entry.frameTime < 0.0f) {
             entry.currentFrame = (entry.currentFrame + 1) % entry.animation->GetFrameCount();
             entry.frameTime += 1.0f / entry.animation->GetFrameRate(); // 
         }
+
+        // Orbit movement
+        entry.orbitAngle += entry.orbitSpeed * dt;
     }
 	//rootNode->Update(dt);
 }
@@ -206,8 +218,8 @@ void Renderer::RenderScene() {
 void Renderer::DrawVolcano() {
 	BindShader(objModelShader);
 
-	modelMatrix = Matrix4::Translation(Vector3(10000.0f, 90.0f, 16000.0f)) *
-		Matrix4::Scale(Vector3(5.0f, 5.0f, 5.0f)) *
+	modelMatrix = Matrix4::Translation(Vector3(4500.0f, 400.0f, 4800.0f)) *
+		Matrix4::Scale(Vector3(1.5f, 1.5f, 1.5f)) *
 		Matrix4::Rotation(90, Vector3(0, 1, 0)) * 
         Matrix4::Rotation(3, Vector3(1, 0, 0));
 
@@ -250,9 +262,9 @@ void Renderer::DrawHeightmap() {
 
     SetShaderLights(sceneLights);
 
-    float scaleHMapX = 10.0f; 
+    float scaleHMapX = 1.0f; 
     float scaleHMapY = 1.0f; 
-    float scaleHMapZ = 10.0f;
+    float scaleHMapZ = 1.0f;
 
     Vector3 hMapSize = heightMap->GetHeightmapSize();
     Vector3 nMapSize = heightMap2->GetHeightmapSize();
@@ -268,8 +280,8 @@ void Renderer::DrawHeightmap() {
     BindTexture(volcanoTexture, GL_TEXTURE0, "diffuseTex");
     BindTexture(heightMapTex2, GL_TEXTURE1, "heightMap");
     
-    modelMatrix = Matrix4::Translation(Vector3(0, 20.0f, 0)) *
-        Matrix4::Scale(Vector3(scaleHMapX, 12.0f, scaleHMapZ)) *
+    modelMatrix = Matrix4::Translation(Vector3(0, 200.0f, 0)) *
+        Matrix4::Scale(Vector3(scaleHMapX, 5.0f, scaleHMapZ)) *
         Matrix4::Rotation(-6.2f, Vector3(0, 1, 0));
 	UpdateShaderMatrices();
 	heightMap->Draw();
@@ -281,7 +293,7 @@ void Renderer::DrawHeightmap() {
     BindTexture(heightMapTex, GL_TEXTURE1, "heightMap");
 
     modelMatrix = Matrix4::Translation(Vector3(0.0f, 360.0f, 0.0f)) *
-        Matrix4::Scale(Vector3(noiseScaleX, 8.0f, noiseScaleZ)) *
+        Matrix4::Scale(Vector3(noiseScaleX, 4.0f, noiseScaleZ)) *
         Matrix4::Rotation(-6.2f, Vector3(0, 1, 0));
     UpdateShaderMatrices();
     heightMap2->Draw();
@@ -291,17 +303,26 @@ void Renderer::DrawAnimatedMesh() {
     BindShader(skinningShader);
 
     for (AnimatedMesh& entry : animatedMeshes) {
-        modelMatrix = Matrix4::Translation(Vector3(-10.0f, 0.0f, 0.0f)) *
-            Matrix4::Scale(Vector3(4, 4, 4));
+        // Calculate position on circular path
+        float x = entry.center.x + entry.orbitRadius * cos(entry.orbitAngle);
+        float z = entry.center.z + entry.orbitRadius * sin(entry.orbitAngle);
+        Vector3 pos = Vector3(x, entry.height, z);
+
+        // Face the direction of travel (tangent to the circle)
+        float yaw = entry.orbitAngle + PI * 1.5; // +90 degrees to face forward
+        yaw = -yaw; // Negate to correct for coordinate system
+
+        modelMatrix = Matrix4::Translation(Vector3(pos))
+            * Matrix4::Rotation(yaw * (180.0f / PI), Vector3(0, 1, 0))
+            * Matrix4::Scale(Vector3(entry.scale, entry.scale, entry.scale));
         UpdateShaderMatrices();
 
         // Upload animation joint matrices
         vector<Matrix4> frameMatrices;
-        const Matrix4* invBindPose = bird->GetInverseBindPose();
-        const Matrix4* frameData = birdAnim->GetJointData(entry.currentFrame);
-
+        const Matrix4* invBindPose = entry.mesh->GetInverseBindPose();
+        const Matrix4* frameData = entry.animation->GetJointData(entry.currentFrame);
         
-        for (int i = 0; i < bird->GetJointCount(); i++) {
+        for (int i = 0; i < entry.mesh->GetJointCount(); i++) {
            frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
         }
 
@@ -309,7 +330,7 @@ void Renderer::DrawAnimatedMesh() {
         glUniformMatrix4fv(j, frameMatrices.size(), false, (float*)frameMatrices.data());
 
         // Draw brid submeshes with their textures
-        for (int i = 0; i < bird->GetSubMeshCount(); i++) {
+        for (int i = 0; i < entry.mesh->GetSubMeshCount(); i++) {
             if (i < (int)entry.textures.size()) {
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, entry.textures[i]);
@@ -319,11 +340,19 @@ void Renderer::DrawAnimatedMesh() {
     }
 }
 
-void Renderer::RegisterAnimatedMesh(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material) {
+void Renderer::RegisterAnimatedMesh(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material, 
+    Vector3 center, float radius, float startAngle, float speed, float height, float scale) {
+    
     AnimatedMesh entry;
     entry.mesh = mesh;
     entry.animation = anim;
     entry.material = material;
+    entry.center = center;
+    entry.orbitRadius = radius;
+    entry.orbitAngle = startAngle;
+    entry.orbitSpeed = speed;
+    entry.height = height;
+    entry.scale = scale;
 
     for (int i = 0; i < mesh->GetSubMeshCount(); ++i) {
         const MeshMaterialEntry* matEntry = material->GetMaterialForLayer(i);

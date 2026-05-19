@@ -3,12 +3,10 @@ MeshMat
 2
 2
 MatI_Ride_FengHuang_01a
-2
-InvertY:true
-UseColor:false
+1
+Diffuse:Tex_Ride_FengHuang_01a_D_A.tga.png
 MatI_Ride_FengHuang_01b
-2
-InvertY:true
-UseColor:false
+1
+Diffuse:Tex_Ride_FengHuang_01b_D_A.tga.png
 0
 1

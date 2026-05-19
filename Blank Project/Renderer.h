@@ -19,6 +19,15 @@ struct AnimatedMesh {
     std::vector<GLuint> textures;
     int currentFrame = 0;
     float frameTime = 0.0f;
+
+    // Circle movement
+    Vector3 center; // Center of the circular path
+    float orbitRadius; // Radius of the circular path
+    float orbitAngle; // Current angle around the circle
+    float orbitSpeed; // Speed of orbiting (radians per second)
+    float height; // Height above the ground
+    float scale; // Scale of the mesh
+    float currentYaw; // Current yaw angle for rotation
 };
 
 class Renderer : public OGLRenderer {
@@ -34,7 +43,7 @@ protected:
 	void DrawHeightmap();
 	void DrawSkybox();
 	void DrawVolcano();
-    void RegisterAnimatedMesh(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material);
+    void RegisterAnimatedMesh(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material, Vector3 center, float radius, float startAngle, float speed, float height, float scale);
     void DrawAnimatedMesh();
 	void DrawNode(SceneNode* n);
 

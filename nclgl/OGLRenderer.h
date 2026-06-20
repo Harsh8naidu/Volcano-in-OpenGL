@@ -75,6 +75,12 @@ protected:
     void            SetShaderLights(const vector<Light*>& l);
     void            BindMaterial(const Material& mat);
     void            BindTexture(GLuint texture, GLenum textureUnit, const char* uniformName, GLuint fallback = 0);
+    void            GeneratePostProcessBuffers();
+    void            GenerateHDRFBO();
+    void            GenerateBrightFBO();
+    void            GeneratePingPongFBOs();
+
+    GLuint CreateFloatingPointTexture();
 
 	void StartDebugGroup(const std::string& s) {
 		glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, (GLsizei)s.length(), s.c_str());
@@ -99,6 +105,16 @@ protected:
     GLuint defaultDiffuse; // Default diffuse texture (white)
     GLuint defaultRoughness; // Default roughness texture (white)
     GLuint defaultMetallic; // Default metallic texture (white)
+
+    GLuint hdrFBO = 0; // HDR framebuffer object
+    GLuint hdrColorBuffer = 0; // HDR color buffer texture (hdrTexture)
+    GLuint rboDepth = 0; // Depth renderbuffer object
+
+    GLuint brightFBO = 0; // Brightness extraction framebuffer object
+    GLuint brightTexture = 0; // Brightness extraction color buffer texture (brightColorBuffer)
+
+    GLuint pingpongFBO[2]; // Ping-pong framebuffer objects for 
+    GLuint pingpongColorbuffers[2]; // Ping-pong color buffer textures for blurring
 
 private:
 	Shader* currentShader;	

@@ -18,6 +18,11 @@ Material::Material()
 	metallicTexture(0)
     {}
 
+MaterialLoader::MaterialLoader(const std::string& filePath)
+{
+    LoadMTL(filePath);
+}
+
 bool MaterialLoader::LoadMTL(const std::string& filePath) {
     std::ifstream file(filePath);
     if (!file.is_open()) {

@@ -24,8 +24,7 @@ public:
         modelLoader = new ModelLoader(objFilePath);
 
 		// Load the material properties
-		materialLoader = new MaterialLoader();
-		materialLoader->LoadMTL(mtlFilePath);
+		materialLoader = new MaterialLoader(mtlFilePath);
 
 		// Initialize the indices
 		indices = modelLoader->indices.size();

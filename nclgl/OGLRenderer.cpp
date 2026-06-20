@@ -1,3 +1,5 @@
+#include "OGLRenderer.h"
+#include "OGLRenderer.h"
 /*
 Class:OGLRenderer
 Author:Rich Davison	 <richard-gordon.davison@newcastle.ac.uk>
@@ -162,6 +164,8 @@ OGLRenderer::OGLRenderer(Window &window)	{
     glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture
 
 	window.SetRenderer(this);					//Tell our window about the new renderer! (Which will in turn resize the renderer window to fit...)
+    
+    GeneratePostProcessBuffers();
 }
 
 //#ifdef _DEBUG  
@@ -257,6 +261,119 @@ void OGLRenderer::BindTexture(GLuint texture, GLenum textureUnit, const char* un
         }
     }
 }
+
+void OGLRenderer::GeneratePostProcessBuffers()
+{
+    GenerateHDRFBO();
+    GenerateBrightFBO();
+    GeneratePingPongFBOs();
+}
+
+void OGLRenderer::GenerateHDRFBO()
+{
+    // Create framebuffer
+    glGenFramebuffers(1, &hdrFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+
+    // Floating point color buffer texture
+    hdrColorBuffer = CreateFloatingPointTexture();
+
+    // Attach color buffer to framebuffer
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, hdrColorBuffer, 0);
+
+    // Depth buffer (renderbuffer)
+    glGenRenderbuffers(1, &rboDepth);
+    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+
+    // Allocate storage for the depth buffer
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+
+    // Attach depth buffer to framebuffer
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+
+    // Check if framebuffer is complete
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cout << "OGLRenderer::GenerateHDRBuffers(): Framebuffer is not complete!\n";
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind framebuffer to return to default framebuffer
+}
+
+void OGLRenderer::GenerateBrightFBO()
+{
+    glGenFramebuffers(1, &brightFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, brightFBO);
+
+    brightTexture = CreateFloatingPointTexture();
+
+    // Attach bright texture to framebuffer
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brightTexture, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cout << "OGLRenderer::GenerateBrightFBO(): Framebuffer is not complete!\n";
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind framebuffer to return to default framebuffer
+}
+
+void OGLRenderer::GeneratePingPongFBOs()
+{
+    // Create ping-pong framebuffers for post-processing (like blur, bloom)
+    glGenFramebuffers(2, pingpongFBO);
+    glGenTextures(2, pingpongColorbuffers);
+
+    for (unsigned int i = 0; i < 2; i++) {
+        glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
+
+        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[i]);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, nullptr);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongColorbuffers[i], 0);
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            std::cout << "Pingpong FBO incomplete!\n";
+        }
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+GLuint OGLRenderer::CreateFloatingPointTexture()
+{
+    GLuint tex;
+
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RGB16F,
+        width,
+        height,
+        0,
+        GL_RGB,
+        GL_FLOAT,
+        NULL
+    );
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    return tex;
+}
+
+
 
 void OGLRenderer::SetTextureRepeating(GLuint target, bool repeating)
 {

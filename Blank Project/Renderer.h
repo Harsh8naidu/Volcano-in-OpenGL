@@ -46,6 +46,7 @@ protected:
     void RegisterAnimatedMesh(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material, Vector3 center, float radius, float startAngle, float speed, float height, float scale);
     void DrawAnimatedMesh();
 	void DrawNode(SceneNode* n);
+    void DrawPostProcessQuad();
 
     // Shaders
 	Shader* lightShader = nullptr;
@@ -57,6 +58,11 @@ protected:
     Shader* terrainShader = nullptr;
     Shader* skinningShader = nullptr;
 
+    // Post-processing shaders
+    Shader* brightShader;
+    Shader* blurShader;
+    Shader* combineShader;
+
     std::vector<Shader*> shaders;
 
     // Heightmaps
@@ -66,6 +72,7 @@ protected:
     // Meshes
 	Mesh* quad = nullptr;
     Mesh* bird = nullptr;
+    Mesh* postProcessQuad = nullptr;
 
     std::vector<Mesh*> meshes;
 

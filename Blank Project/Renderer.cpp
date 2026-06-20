@@ -19,6 +19,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	// Load the meshes
 	quad = Mesh::GenerateQuad();
+    postProcessQuad = Mesh::GenerateQuad();
     bird = Mesh::LoadFromMeshFile("fly.msh");
     
     // Push meshes into a vector array
@@ -114,6 +115,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	lightShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
     terrainShader = new Shader("terrainVertexShader.glsl", "terrainFragmentShader.glsl");
     skinningShader = new Shader("SkinningVertex.glsl", "TexturedFragment.glsl");
+    brightShader = new Shader("post.glsl", "bright.glsl");
+    blurShader = new Shader("post.glsl", "blur.glsl");
+    combineShader = new Shader("post.glsl", "combine.glsl");
 
     shaders.push_back(objModelShader);
     shaders.push_back(modelShader);
@@ -121,6 +125,10 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
     shaders.push_back(skyboxShader);
     shaders.push_back(lightShader);
     shaders.push_back(terrainShader);
+    shaders.push_back(skinningShader);
+    shaders.push_back(brightShader);
+    shaders.push_back(blurShader);
+    shaders.push_back(combineShader);
 
     // Check if any shader failed to load
     for (Shader* shader : shaders) {
@@ -136,10 +144,10 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	camera->SetYaw(180.0f);
 
 	// Lights for the scene
-    sceneLights.push_back(new Light(Vector3(15000.0f, 3000.0f, 25000.0f), Vector4(1.0f, 0.95f, 0.6f, 1.0f), 5000.0f));
-    sceneLights.push_back(new Light(Vector3(25000.0f, 3000.0f, 22000.0f), Vector4(1.0f, 0.95f, 0.6f, 1.0f), 5000.0f));
-    sceneLights.push_back(new Light(Vector3(30000.0f, 3000.0f, 25000.0f), Vector4(1.0f, 0.95f, 0.6f, 1.0f), 5000.0f));
-    sceneLights.push_back(new Light(Vector3(20000.0f, 2000.0f, 30000.0f), Vector4(1.0f, 0.95f, 0.6f, 1.0f), 5000.0f));
+    sceneLights.push_back(new Light(Vector3(15000.0f, 500.0f, 25000.0f), Vector4(0.0f, 40.0f, 0.0f, 1.0f), 30000.0f));
+    sceneLights.push_back(new Light(Vector3(25000.0f, 500.0f, 22000.0f), Vector4(0.0f, 40.0f, 0.0f, 1.0f), 30000.0f));
+    sceneLights.push_back(new Light(Vector3(30000.0f, 500.0f, 25000.0f), Vector4(0.0f, 40.0f, 0.0f, 1.0f), 30000.0f));
+    sceneLights.push_back(new Light(Vector3(20000.0f, 500.0f, 30000.0f), Vector4(0.0f, 40.0f, 0.0f, 1.0f), 30000.0f));
 
 	// Set up the matrices
 	projMatrix = Matrix4::Perspective(1.0f, 50000.0f, (float)width / (float)height, 45.0f);
@@ -206,13 +214,92 @@ void Renderer::UpdateScene(float dt) {
 }
 
 void Renderer::RenderScene() {
+    // =========================================================
+    // PASS 1 : Render HDR scene into hdrFBO
+    // =========================================================
+
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+    glViewport(0, 0, width, height);
+    glEnable(GL_DEPTH_TEST);
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
+
     DrawSkybox();
 	DrawHeightmap();
 	DrawVolcano();
     DrawAnimatedMesh();
-	//DrawNode(rootNode);
+	
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // =========================================================
+    // PASS 2 : Extract bright areas into brightFBO
+    // =========================================================
+    glBindFramebuffer(GL_FRAMEBUFFER, brightFBO);
+    glViewport(0, 0, width, height);
+    
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    BindShader(brightShader);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, hdrColorBuffer);
+    
+    glUniform1i(glGetUniformLocation(brightShader->GetProgram(), "sceneTexture"), 0);
+
+    DrawPostProcessQuad();
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // =========================================================
+    // PASS 3 : Blur bright areas using ping-pong FBOs
+    // =========================================================
+
+    bool horizontal = true, firstIteration = true;
+    
+    int blurPasses = 10; // Number of blur passes
+
+    BindShader(blurShader);
+
+    for (int i = 0; i < blurPasses; i++) {
+        // Write to the opposite ping-pong FBO each pass
+        glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
+        glViewport(0, 0, width, height);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        // Tell the shader which direction to blur (horizontal or vertical)
+        glUniform1i(glGetUniformLocation(blurShader->GetProgram(), "horizontal"), horizontal);
+
+        // First blur pass uses the bright texture, subsequent passes use the previous ping-pong result
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, firstIteration ? brightTexture : pingpongColorbuffers[!horizontal]);
+
+        glUniform1i(glGetUniformLocation(blurShader->GetProgram(), "image"), 0);
+        DrawPostProcessQuad();
+
+        horizontal = !horizontal; // Toggle direction
+        
+        if (firstIteration) {
+            firstIteration = false;
+        }
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, width, height);
+
+    // =========================================================
+    // PASS 4 : Combine original scene with blurred bloom texture
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    BindShader(combineShader);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, hdrColorBuffer);
+    glUniform1i(glGetUniformLocation(combineShader->GetProgram(), "sceneTexture"), 0);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[!horizontal]); // Final blurred texture
+    glUniform1i(glGetUniformLocation(combineShader->GetProgram(), "bloomTexture"), 1);
+
+    DrawPostProcessQuad();
 }
 
 void Renderer::DrawVolcano() {
@@ -258,7 +345,8 @@ void Renderer::DrawHeightmap() {
 	// Draw the heightmap
 	BindShader(terrainShader);
 
-    glUniform3fv(glGetUniformLocation(terrainShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+    Vector3 camPos = camera->GetPosition();
+    glUniform3fv(glGetUniformLocation(terrainShader->GetProgram(), "cameraPos"), 1, (float*)&camPos);
 
     SetShaderLights(sceneLights);
 
@@ -397,4 +485,13 @@ void Renderer::DrawNode(SceneNode* n) {
 		i != n->GetChildIteratorEnd(); ++i) {
 		DrawNode(*i);
 	}
+}
+
+void Renderer::DrawPostProcessQuad()
+{
+    glDisable(GL_DEPTH_TEST);
+
+    postProcessQuad->Draw();
+
+    glEnable(GL_DEPTH_TEST);
 }

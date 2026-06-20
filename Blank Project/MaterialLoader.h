@@ -14,6 +14,7 @@ struct MaterialRange {
 
 class MaterialLoader {
 public:
+    MaterialLoader(const std::string& filePath);
     bool LoadMTL(const std::string& filePath);
 
     const std::vector<Material>& GetMaterials() const { return materials; }

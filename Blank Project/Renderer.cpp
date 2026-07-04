@@ -24,6 +24,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
     LoadTextures();
     LoadShaders();
 
+    // Initialize audio system (FMOD)
+    InitAudio();
+
     AnimateBird();
     AnimateSkeleton();
 
@@ -755,5 +758,76 @@ void Renderer::AnimateSkeleton()
     for (int i = 0; i < 15; ++i) {
         RegisterAnimatedMesh(skeleton, skeletonAnim, skeletonMaterial,
             positions[i], yaws[i], skeletonScale, rainbowGradientTex);
+    }
+}
+
+void Renderer::InitAudio()
+{
+    FMOD_RESULT result;
+
+    // Create FMOD system
+    result = FMOD::System_Create(&fmodSystem);
+    CheckFMODError(result);
+
+    // Initialize FMOD system with 32 channels
+    result = fmodSystem->init(32, FMOD_INIT_NORMAL, 0);
+
+    CheckFMODError(result);
+
+    // Load and play background music
+    PlaySoundEffect(MUSICDIR "bg_music.mp3");
+
+    // Set the music volume
+    SetMusicVolume(0.5f); // Set initial volume to 50%
+
+    std::cout << "Audio system intialized successfully." << std::endl;
+}
+
+void Renderer::CheckFMODError(FMOD_RESULT result)
+{
+        if (result != FMOD_OK) {
+        std::cerr << "FMOD error! (" << result << ") " << FMOD_ErrorString(result) << std::endl;
+        exit(-1);
+        }
+}
+
+void Renderer::SetMusicVolume(float volume)
+{
+    // Clamp volume between 0.0f and 1.0f
+    if (volume < 0.0f) volume = 0.0f;
+    if (volume > 1.0f) volume = 1.0f;
+
+    if (musicChannel) {
+        musicChannel->setVolume(volume);
+    }
+}
+
+void Renderer::PlaySoundEffect(const std::string& soundPath)
+{
+    FMOD::Sound* sound = nullptr;
+    FMOD::Channel* channel = nullptr;
+
+    // Load the sound effect
+    FMOD_RESULT result = fmodSystem->createSound(soundPath.c_str(), FMOD_DEFAULT, 0, &sound);
+
+    CheckFMODError(result);
+
+    // Play the sound effect
+    if (sound) {
+        std::cout << "Playing sound effect: " << soundPath << std::endl;
+        result = fmodSystem->playSound(sound, 0, false, &channel);
+        CheckFMODError(result);
+
+        musicChannel = channel; // Store the channel for volume control
+
+        loadedSounds.push_back(sound); // Cache the sound so it doesn't get garbage collected immediately
+    }
+}
+
+void Renderer::StopSoundEffect()
+{
+    if (musicChannel) {
+        musicChannel->stop();
+        musicChannel = nullptr;
     }
 }

@@ -74,3 +74,12 @@ target_link_libraries(Advanced-Graphics-For-Games PRIVATE
     $<$<CONFIG:Debug>:fmodL_vc>
     $<$<CONFIG:Release>:fmod_vc>
 )
+
+# Copy FMOD DLLs to output directory
+add_custom_command(TARGET Advanced-Graphics-For-Games POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "$<$<CONFIG:Debug>:${FMOD_LIB_DIR}/fmodL.dll>"
+    "$<$<CONFIG:Release>:${FMOD_LIB_DIR}/fmod.dll>"
+    $<TARGET_FILE_DIR:Advanced-Graphics-For-Games>
+    COMMENT "Copying FMOD DLL to output directory"
+)

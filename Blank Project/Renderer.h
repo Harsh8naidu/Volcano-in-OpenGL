@@ -3,6 +3,8 @@
 #include "../nclgl/Vector3.h"
 #include "ObjModel.h"
 #include <nclgl/MeshAnimation.h>
+#include <fmod.hpp>
+#include <fmod_errors.h>
 
 class Camera;
 class Shader;
@@ -37,11 +39,12 @@ public:
 	Renderer(Window& parent);
 	~Renderer(void);
 
-    void DebugSkeletonPose();
-
 	void RenderScene() override;
-
 	void UpdateScene(float dt) override;
+    
+    void SetMusicVolume(float volume);
+    void PlaySoundEffect(const std::string& soundPath);
+    void StopSoundEffect();
 
 protected:
 	void DrawHeightmap();
@@ -136,4 +139,15 @@ protected:
     ObjModel* mountainModel = nullptr;
 
     float frameTime = 0.0f; // Time accumulator for frame updates
+
+    // Fmod
+    std::vector<FMOD::Sound*> loadedSounds;
+
+private:
+    // FMod Studio
+    FMOD::System* fmodSystem;
+    FMOD::Channel* musicChannel;
+
+    void InitAudio();
+    void CheckFMODError(FMOD_RESULT result);
 };

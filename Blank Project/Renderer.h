@@ -21,19 +21,23 @@ struct AnimatedMesh {
     float frameTime = 0.0f;
 
     // Circle movement
-    Vector3 center; // Center of the circular path
+    Vector3 position; // Center of the circular path
     float orbitRadius; // Radius of the circular path
     float orbitAngle; // Current angle around the circle
     float orbitSpeed; // Speed of orbiting (radians per second)
     float height; // Height above the ground
     float scale; // Scale of the mesh
     float currentYaw; // Current yaw angle for rotation
+    bool isSkeleton = false;
+    float rotationSpeed = 0.0f; // Speed of rotation (radians per second)
 };
 
 class Renderer : public OGLRenderer {
 public:
 	Renderer(Window& parent);
 	~Renderer(void);
+
+    void DebugSkeletonPose();
 
 	void RenderScene() override;
 
@@ -43,10 +47,20 @@ protected:
 	void DrawHeightmap();
 	void DrawSkybox();
 	void DrawVolcano();
+    void DrawArena();
     void RegisterAnimatedMesh(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material, Vector3 center, float radius, float startAngle, float speed, float height, float scale);
+    void RegisterAnimatedMesh(Mesh* mesh, MeshAnimation* anim, MeshMaterial* material, Vector3 positon, float yaw, float scale, GLuint colorTexture);
     void DrawAnimatedMesh();
 	void DrawNode(SceneNode* n);
     void DrawPostProcessQuad();
+    void AddLightsToScene();
+    void LoadShaders();
+    void LoadTextures();
+    void LoadMeshes();
+    void LoadAnimations();
+    void LoadMaterials();
+    void AnimateBird();
+    void AnimateSkeleton();
 
     // Shaders
 	Shader* lightShader = nullptr;
@@ -70,14 +84,16 @@ protected:
 	HeightMap* heightMap2 = nullptr;
 
     // Meshes
+    std::vector<Mesh*> meshes;
+
 	Mesh* quad = nullptr;
     Mesh* bird = nullptr;
     Mesh* postProcessQuad = nullptr;
-
-    std::vector<Mesh*> meshes;
+    Mesh* skeleton = nullptr;
 
     // Animations
     MeshAnimation* birdAnim = nullptr;
+    MeshAnimation* skeletonAnim = nullptr;
 
     std::vector<MeshAnimation*> animations;
     
@@ -85,16 +101,17 @@ protected:
 
    // Materials
     MeshMaterial* birdMaterial = nullptr;
+    MeshMaterial* skeletonMaterial = nullptr;
 
     std::vector<MeshMaterial*> meshMaterials;
 
     // Scene Lights
+    std::vector<Light*> sceneLights;
+
 	Light* sceneLight = nullptr;
     Light* sceneLight2 = nullptr;
     Light* sceneLight3 = nullptr;
     Light* sceneLight4 = nullptr;
-
-    std::vector<Light*> sceneLights;
 
 	Camera* camera = nullptr;
 
@@ -107,6 +124,8 @@ protected:
 	GLuint earthBump;
 	GLuint modelTexture;
 	GLuint volcanoTexture;
+    GLuint lavaNoiseTex;
+    GLuint rainbowGradientTex;
 
     std::vector<GLuint> textures;
 
@@ -114,4 +133,7 @@ protected:
 
 	// .obj objects
 	ObjModel* volcanoModel = nullptr;
+    ObjModel* mountainModel = nullptr;
+
+    float frameTime = 0.0f; // Time accumulator for frame updates
 };

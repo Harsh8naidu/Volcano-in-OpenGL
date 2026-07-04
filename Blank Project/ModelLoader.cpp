@@ -65,8 +65,6 @@ bool ModelLoader::LoadOBJ(const std::string& filePath) {
             // Start tracking new material
             lineStream >> currentMaterialName;
             currentStartIndex = (int)indices.size();
-
-            std::cout << "Switching to material: " << currentMaterialName << std::endl;
         }
         else if (type == "f") { // Face indices
             std::string vertexData;

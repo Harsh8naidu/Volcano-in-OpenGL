@@ -74,13 +74,15 @@ protected:
 	void 			SetShaderLight(const Light &l);
     void            SetShaderLights(const vector<Light*>& l);
     void            BindMaterial(const Material& mat);
-    void            BindTexture(GLuint texture, GLenum textureUnit, const char* uniformName, GLuint fallback = 0);
+    void            BindTexture(GLuint texture, GLenum textureUnit, const char* uniformName, GLenum textureTarget = GL_TEXTURE_2D, GLuint fallback = 0);
     void            GeneratePostProcessBuffers();
     void            GenerateHDRFBO();
     void            GenerateBrightFBO();
     void            GeneratePingPongFBOs();
 
     GLuint CreateFloatingPointTexture();
+    GLuint CreateSolidColorTexture(int r, int g, int b);
+    GLuint CreateRainbowGradient();
 
 	void StartDebugGroup(const std::string& s) {
 		glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, (GLsizei)s.length(), s.c_str());

@@ -19,6 +19,7 @@ class ModelLoader {
 public:
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
+    std::vector<MaterialRange> materialRanges;
 
     ModelLoader() = default;
 
@@ -26,8 +27,6 @@ public:
 
     // Loads the OBJ file from the given file path
     bool LoadOBJ(const std::string& filePath);
-
-    std::vector<MaterialRange> materialRanges;
 
     const std::vector<MaterialRange>& GetMaterialRanges() const { return materialRanges; }
 

@@ -251,10 +251,10 @@ void OGLRenderer::BindShader(Shader*s) {
 	glUseProgram(s->GetProgram());
 }
 
-void OGLRenderer::BindTexture(GLuint texture, GLenum textureUnit, const char* uniformName, GLuint fallback) {
+void OGLRenderer::BindTexture(GLuint texture, GLenum textureUnit, const char* uniformName, GLenum textureTarget, GLuint fallback) {
     if (texture > 0) {
         glActiveTexture(textureUnit);
-        glBindTexture(GL_TEXTURE_2D, texture > 0 ? texture : fallback);
+        glBindTexture(textureTarget, texture > 0 ? texture : fallback);
         GLint loc = glGetUniformLocation(currentShader->GetProgram(), uniformName);
         if (loc >= 0) { // Only set the uniform if it exists in the shader
             glUniform1i(loc, textureUnit - GL_TEXTURE0); // Set the uniform to the correct texture unit index
@@ -373,7 +373,56 @@ GLuint OGLRenderer::CreateFloatingPointTexture()
     return tex;
 }
 
+GLuint OGLRenderer::CreateSolidColorTexture(int r, int g, int b)
+{
+    GLuint tex;
+    unsigned char color[4] = { r, g, b, 255 }; // RGBA
 
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, color);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    return tex;
+}
+
+GLuint OGLRenderer::CreateRainbowGradient()
+{
+    unsigned char gradient[256 * 3];
+
+    // Generate HSV-like rainbow from 0-360 degrees
+    for (int i = 0; i < 256; ++i) {
+        float hue = (i / 256.0f) * 360.0f;
+        // Simple RGB cycling
+        if (hue < 60) {
+            gradient[i * 3] = 255; gradient[i * 3 + 1] = (int)(hue * 4.25f); gradient[i * 3 + 2] = 0;
+        }
+        else if (hue < 120) {
+            gradient[i * 3] = (int)(255 - (hue - 60) * 4.25f); gradient[i * 3 + 1] = 255; gradient[i * 3 + 2] = 0;
+        }
+        else if (hue < 180) {
+            gradient[i * 3] = 0; gradient[i * 3 + 1] = 255; gradient[i * 3 + 2] = (int)((hue - 120) * 4.25f);
+        }
+        else if (hue < 240) {
+            gradient[i * 3] = 0; gradient[i * 3 + 1] = (int)(255 - (hue - 180) * 4.25f); gradient[i * 3 + 2] = 255;
+        }
+        else {
+            gradient[i * 3] = (int)((hue - 240) * 4.25f); gradient[i * 3 + 1] = 0; gradient[i * 3 + 2] = 255;
+        }
+    }
+
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_1D, tex);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB, 256, 0, GL_RGB, GL_UNSIGNED_BYTE, gradient);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+
+    return tex;
+}
 
 void OGLRenderer::SetTextureRepeating(GLuint target, bool repeating)
 {
@@ -394,9 +443,9 @@ void OGLRenderer::BindMaterial(const Material& mat)
     glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "illuminationModel"), mat.illuminationModel);
 
     // Bind textures if they exist, and set the corresponding uniform names in the shader
-    BindTexture(mat.diffuseTexture, GL_TEXTURE0, "diffuseTexture", defaultDiffuse);
-    BindTexture(mat.roughnessTexture, GL_TEXTURE1, "roughnessTexture", defaultRoughness);
-    BindTexture(mat.metallicTexture, GL_TEXTURE2, "metallicTexture", defaultMetallic);
+    BindTexture(mat.diffuseTexture, GL_TEXTURE0, "diffuseTexture", GL_TEXTURE_2D, defaultDiffuse);
+    BindTexture(mat.roughnessTexture, GL_TEXTURE1, "roughnessTexture", GL_TEXTURE_2D, defaultRoughness);
+    BindTexture(mat.metallicTexture, GL_TEXTURE2, "metallicTexture", GL_TEXTURE_2D, defaultMetallic);
 }
 
 // Multiple lights - up to 16 (defined in shader as MAX_LIGHTS)
@@ -409,7 +458,7 @@ void OGLRenderer::SetShaderLights(const vector<Light*>& lights)
         Vector4 col = lights[i]->GetColour();
         float radius = lights[i]->GetRadius();
         glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), (base + ".position").c_str()), 1, (float*)&pos);
-        glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), (base + ".colour").c_str()), 1, (float*)&col);
+        glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), (base + ".color").c_str()), 1, (float*)&col);
         glUniform1f(glGetUniformLocation(currentShader->GetProgram(), (base + ".radius").c_str()), radius);
     }
 }

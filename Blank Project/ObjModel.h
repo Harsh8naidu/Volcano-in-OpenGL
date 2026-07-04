@@ -15,7 +15,6 @@ public:
     GLuint modelVAO;         // Vertex Array Object for the model
 	GLuint modelVBO;         // Vertex Buffer Object for the model
 	GLuint modelEBO;         // Element Buffer Object for the model
-	int indices;			 // Number of indices in the model
 
 	Material* material; // store the material properties
 
@@ -25,9 +24,6 @@ public:
 
 		// Load the material properties
 		materialLoader = new MaterialLoader(mtlFilePath);
-
-		// Initialize the indices
-		indices = modelLoader->indices.size();
 
         // Create and bind VAO
         glGenVertexArrays(1, &modelVAO); // Generate the VAO
@@ -89,8 +85,4 @@ public:
 	GLuint getEBO() const {
 		return modelEBO;
 	}
-
-    unsigned int getIndexCount() const {
-        return static_cast<unsigned int>(indices);
-    }
 };
